@@ -14,8 +14,8 @@ INPUT_FILES = Channel.fromFilePairs(params.datasets, size: 1, flat: true)
  * a KINC data object.
  */
 process import_emx {
-	tag { "${dataset}" }
-	publishDir params.output_dir
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
 
 	input:
 		set val(dataset), file(input_file) from INPUT_FILES
@@ -23,7 +23,8 @@ process import_emx {
 	output:
 		set val(dataset), file("${dataset}.emx") into EMX_FILES
 
-	when: params.run_import_emx == true
+	when:
+		params.run_import_emx == true
 
 	script:
 		"""
@@ -48,7 +49,7 @@ EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EX
  * The similarity process performs a single chunk of KINC similarity.
  */
 process similarity {
-	tag { "${dataset}/${index}" }
+	tag "${dataset}/${index}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY
@@ -57,7 +58,8 @@ process similarity {
 	output:
 		set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
-	when: params.run_similarity == true
+	when:
+		params.run_similarity == true
 
 	script:
 		"""
@@ -86,8 +88,8 @@ SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
  * and merges them into the final output files.
  */
 process merge {
-	tag { "${dataset}" }
-	publishDir params.output_dir
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_MERGE
@@ -123,8 +125,8 @@ CMX_FILES.into { CMX_FILES_FOR_EXPORT; CMX_FILES_FOR_THRESHOLD; CMX_FILES_FOR_EX
  * into a plain-text format.
  */
 process export_cmx {
-	tag { "${dataset}" }
-	publishDir params.output_dir
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT
@@ -134,7 +136,8 @@ process export_cmx {
 	output:
 		set val(dataset), file("${dataset}-cmx.txt")
 
-	when: params.run_export_cmx == true
+	when:
+		params.run_export_cmx == true
 
 	script:
 		"""
@@ -155,8 +158,8 @@ process export_cmx {
  * and attempts to find a suitable correlation threshold.
  */
 process threshold {
-	tag { "${dataset}" }
-	publishDir params.output_dir
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
 
 	input:
 		set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD
@@ -164,7 +167,8 @@ process threshold {
 	output:
 		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS
 
-	when: params.run_threshold == true
+	when:
+		params.run_threshold == true
 
 	script:
 		"""
@@ -183,8 +187,8 @@ process threshold {
  * and attempts to find a suitable correlation threshold.
  */
 process extract {
-	tag { "${dataset}" }
-	publishDir params.output_dir
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
@@ -195,7 +199,8 @@ process extract {
 	output:
 		set val(dataset), file("${dataset}-net.txt") into NET_FILES
 
-	when: params.run_extract == true
+	when:
+		params.run_extract == true
 
 	script:
 		"""
