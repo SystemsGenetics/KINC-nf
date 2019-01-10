@@ -3,28 +3,44 @@
 
 
 /**
+ * Create value channel for input files.
+ */
+INPUT_FILES = Channel.fromFilePairs(params.datasets, size: 1, flat: true)
+
+
+
+/**
  * The import_emx process converts a plain-text expression matrix into
  * a KINC data object.
  */
 process import_emx {
+	tag { "${dataset}" }
 	publishDir params.output_dir
 
+	input:
+		set val(dataset), file(input_file) from INPUT_FILES
+
 	output:
-		file("*.emx") into EMX_FILE
+		set val(dataset), file("${dataset}.emx") into EMX_FILES
 
 	when: params.run_import_emx == true
 
 	script:
 		"""
-		EMX_FILE="\$(basename ${params.dataset} .txt).emx"
-
 		kinc settings set logging off || echo
 
 		kinc run import-emx \
-			--input ${params.dataset} \
-			--output \$EMX_FILE
+			--input ${input_file} \
+			--output ${dataset}.emx
 		"""
 }
+
+
+
+/**
+ * Send emx files to each process that uses them.
+ */
+EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EXTRACT }
 
 
 
@@ -32,14 +48,14 @@ process import_emx {
  * The similarity process performs a single chunk of KINC similarity.
  */
 process similarity {
-	tag { index }
+	tag { "${dataset}/${index}" }
 
 	input:
-		file(emx_file) from EMX_FILE
-		val(index) from Channel.from( 0 .. params.chunks-1 )
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY
+		each(index) from Channel.from( 0 .. params.chunks-1 )
 
 	output:
-		set val(emx_file.name), file("*.abd") into SIMILARITY_CHUNKS
+		set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
 	when: params.run_similarity == true
 
@@ -61,7 +77,7 @@ process similarity {
 /**
  * Merge output chunks from similarity into a list.
  */
-GROUPED_CHUNKS = SIMILARITY_CHUNKS.groupTuple()
+SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
 
 
 
@@ -70,36 +86,35 @@ GROUPED_CHUNKS = SIMILARITY_CHUNKS.groupTuple()
  * and merges them into the final output files.
  */
 process merge {
+	tag { "${dataset}" }
 	publishDir params.output_dir
 
 	input:
-		file(emx_file) from EMX_FILE
-		set val(emx_name), file(chunks) from GROUPED_CHUNKS
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_MERGE
+		set val(dataset), file(chunks) from SIMILARITY_CHUNKS_GROUPED
 
 	output:
-		file("*.ccm") into CCM_FILE
-		file("*.cmx") into CMX_FILE
+		set val(dataset), file("${dataset}.ccm") into CCM_FILES
+		set val(dataset), file("${dataset}.cmx") into CMX_FILES
 
 	script:
 		"""
-		CCM_FILE="\$(basename ${params.dataset} .txt).ccm"
-		CMX_FILE="\$(basename ${params.dataset} .txt).cmx"
-
 		kinc settings set logging off || echo
 
 		kinc merge ${params.chunks} similarity \
 			--input ${emx_file} \
-			--ccm \$CCM_FILE \
-			--cmx \$CMX_FILE
+			--ccm ${dataset}.ccm \
+			--cmx ${dataset}.cmx
 		"""
 }
 
 
 
 /**
- * Copy CMX file into all processes that use it.
+ * Send ccm, cmx files to all processes that use them.
  */
-CMX_FILE.into { CMX_FILE_THRESHOLD; CMX_FILE_EXTRACT }
+CCM_FILES.set { CCM_FILES_FOR_EXTRACT }
+CMX_FILES.into { CMX_FILES_FOR_THRESHOLD; CMX_FILES_FOR_EXTRACT }
 
 
 
@@ -108,25 +123,24 @@ CMX_FILE.into { CMX_FILE_THRESHOLD; CMX_FILE_EXTRACT }
  * and attempts to find a suitable correlation threshold.
  */
 process threshold {
+	tag { "${dataset}" }
 	publishDir params.output_dir
 
 	input:
-		file(cmx_file) from CMX_FILE_THRESHOLD
+		set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD
 
 	output:
-		file("*-threshold.log") into THRESHOLD_LOG
+		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS
 
 	when: params.run_threshold == true
 
 	script:
 		"""
-		LOG_FILE="\$(basename ${params.dataset} .txt)-threshold.log"
-
 		kinc settings set logging off || echo
 
 		kinc run rmt \
 			--input ${cmx_file} \
-			--log \$LOG_FILE
+			--log ${dataset}-threshold.log
 		"""
 }
 
@@ -137,22 +151,22 @@ process threshold {
  * and attempts to find a suitable correlation threshold.
  */
 process extract {
+	tag { "${dataset}" }
 	publishDir params.output_dir
 
 	input:
-		file(emx_file) from EMX_FILE
-		file(ccm_file) from CCM_FILE
-		file(cmx_file) from CMX_FILE_EXTRACT
-		file(log_file) from THRESHOLD_LOG
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
+		set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXTRACT
+		set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXTRACT
+		set val(dataset), file(log_file) from THRESHOLD_LOGS
 
 	output:
-		file("*-net.txt")
+		set val(dataset), file("${dataset}-net.txt") into NET_FILES
 
 	when: params.run_extract == true
 
 	script:
 		"""
-		NET_FILE="\$(basename ${params.dataset} .txt)-net.txt"
 		THRESHOLD=\$(tail -n 1 ${log_file})
 
 		kinc settings set logging off || echo
@@ -161,7 +175,7 @@ process extract {
 		   --emx ${emx_file} \
 		   --ccm ${ccm_file} \
 		   --cmx ${cmx_file} \
-		   --output \$NET_FILE \
+		   --output ${dataset}-net.txt \
 		   --mincorr \$THRESHOLD
 		"""
 }
