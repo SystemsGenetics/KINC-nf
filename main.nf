@@ -40,7 +40,7 @@ process import_emx {
 /**
  * Send emx files to each process that uses them.
  */
-EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EXTRACT }
+EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EXPORT; EMX_FILES_FOR_EXTRACT }
 
 
 
@@ -113,8 +113,40 @@ process merge {
 /**
  * Send ccm, cmx files to all processes that use them.
  */
-CCM_FILES.set { CCM_FILES_FOR_EXTRACT }
-CMX_FILES.into { CMX_FILES_FOR_THRESHOLD; CMX_FILES_FOR_EXTRACT }
+CCM_FILES.into { CCM_FILES_FOR_EXPORT; CCM_FILES_FOR_EXTRACT }
+CMX_FILES.into { CMX_FILES_FOR_EXPORT; CMX_FILES_FOR_THRESHOLD; CMX_FILES_FOR_EXTRACT }
+
+
+
+/**
+ * The export_cmx process exports the ccm and cmx files from similarity
+ * into a plain-text format.
+ */
+process export_cmx {
+	tag { "${dataset}" }
+	publishDir params.output_dir
+
+	input:
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT
+		set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXPORT
+		set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXPORT
+
+	output:
+		set val(dataset), file("${dataset}-cmx.txt")
+
+	when: params.run_export_cmx == true
+
+	script:
+		"""
+		kinc settings set logging off || echo
+
+		kinc run export-cmx \
+		   --emx ${emx_file} \
+		   --ccm ${ccm_file} \
+		   --cmx ${cmx_file} \
+		   --output ${dataset}-cmx.txt
+		"""
+}
 
 
 
