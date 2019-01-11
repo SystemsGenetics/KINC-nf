@@ -53,4 +53,4 @@ RUN cd /opt \
 	&& make -s install
 
 ENV KINCDIR  "/opt/kinc"
-ENV PATH     "$KINCDIR/bin:$PATH"
+ENV PATH     "$PATH:$KINCDIR/bin"
