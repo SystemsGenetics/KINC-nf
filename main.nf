@@ -50,6 +50,7 @@ EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EX
  */
 process similarity {
 	tag "${dataset}/${index}"
+	label "gpu"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY
@@ -63,9 +64,9 @@ process similarity {
 
 	script:
 		"""
-		kinc settings set opencl 0:0  || echo
-		kinc settings set threads 4   || echo
-		kinc settings set logging off || echo
+		kinc settings set opencl 0:0                || echo
+		kinc settings set threads ${params.threads} || echo
+		kinc settings set logging off               || echo
 
 		kinc chunkrun ${index} ${params.chunks} similarity \
 			--input ${emx_file} \
