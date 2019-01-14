@@ -31,7 +31,7 @@ process import_emx {
 		set val(dataset), file("${dataset}.emx") into EMX_FILES
 
 	when:
-		params.run_import_emx == true
+		params.import_emx.enabled == true
 
 	script:
 		"""
@@ -67,18 +67,26 @@ process similarity {
 		set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
 	when:
-		params.run_similarity == true
+		params.similarity.enabled == true
 
 	script:
 		"""
-		kinc settings set opencl 0:0                || echo
-		kinc settings set threads ${params.threads} || echo
-		kinc settings set logging off               || echo
+		kinc settings set opencl 0:0                           || echo
+		kinc settings set threads ${params.similarity.threads} || echo
+		kinc settings set logging off                          || echo
 
 		kinc chunkrun ${index} ${params.chunks} similarity \
 			--input ${emx_file} \
-			--clusmethod ${params.clus_method} \
-			--corrmethod ${params.corr_method}
+			--clusmethod ${params.similarity.clus_method} \
+			--corrmethod ${params.similarity.corr_method} \
+			--minexpr ${params.similarity.min_expr} \
+			--minclus ${params.similarity.min_clus} \
+			--maxclus ${params.similarity.max_clus} \
+			--crit ${params.similarity.criterion} \
+			--preout ${params.similarity.preout} \
+			--postout ${params.similarity.postout} \
+			--mincorr ${params.similarity.min_corr} \
+			--maxcorr ${params.similarity.max_corr}
 		"""
 }
 
@@ -145,7 +153,7 @@ process export_cmx {
 		set val(dataset), file("${dataset}-cmx.txt")
 
 	when:
-		params.run_export_cmx == true
+		params.export_cmx.enabled == true
 
 	script:
 		"""
@@ -176,7 +184,7 @@ process threshold {
 		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS
 
 	when:
-		params.run_threshold == true
+		params.threshold.enabled == true
 
 	script:
 		"""
@@ -184,7 +192,9 @@ process threshold {
 
 		kinc run rmt \
 			--input ${cmx_file} \
-			--log ${dataset}-threshold.log
+			--log ${dataset}-threshold.log \
+			--reduction ${params.threshold.reduction} \
+			--spline ${params.threshold.spline}
 		"""
 }
 
@@ -208,7 +218,7 @@ process extract {
 		set val(dataset), file("${dataset}-net.txt") into NET_FILES
 
 	when:
-		params.run_extract == true
+		params.extract.enabled == true
 
 	script:
 		"""
@@ -244,7 +254,7 @@ process visualize {
 		set val(dataset), file("*.png") into PAIRWISE_SCATTER_PLOTS
 
 	when:
-		params.run_visualize == true
+		params.visualize.enabled == true
 
 	script:
 		"""
