@@ -3,9 +3,16 @@
 
 
 /**
- * Create value channel for input files.
+ * Create channel for input files.
  */
 INPUT_FILES = Channel.fromFilePairs(params.datasets, size: 1, flat: true)
+
+
+
+/**
+ * Send input files to each process that uses them.
+ */
+INPUT_FILES.into { INPUT_FILES_FOR_IMPORT_EMX; INPUT_FILES_FOR_VISUALIZE }
 
 
 
@@ -18,7 +25,7 @@ process import_emx {
 	publishDir "${params.output_dir}/${dataset}"
 
 	input:
-		set val(dataset), file(input_file) from INPUT_FILES
+		set val(dataset), file(input_file) from INPUT_FILES_FOR_IMPORT_EMX
 
 	output:
 		set val(dataset), file("${dataset}.emx") into EMX_FILES
@@ -215,5 +222,36 @@ process extract {
 		   --cmx ${cmx_file} \
 		   --output ${dataset}-net.txt \
 		   --mincorr \$THRESHOLD
+		"""
+}
+
+
+
+/**
+ * The visualize process takes extracted network files and saves the
+ * pairwise scatter plots as a directory of images.
+ */
+process visualize {
+	tag "${dataset}"
+	label "python"
+	publishDir "${params.output_dir}/${dataset}/plots"
+
+	input:
+		set val(dataset), file(emx_file) from INPUT_FILES_FOR_VISUALIZE
+		set val(dataset), file(net_file) from NET_FILES
+
+	output:
+		set val(dataset), file("*.png") into PAIRWISE_SCATTER_PLOTS
+
+	when:
+		params.run_visualize == true
+
+	script:
+		"""
+		python3 /opt/KINC/scripts/visualize.py \
+			--emx ${emx_file} \
+			--netlist ${net_file} \
+			--output . \
+			--scale
 		"""
 }

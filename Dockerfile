@@ -54,3 +54,7 @@ RUN cd /opt \
 
 ENV KINCDIR  "/opt/kinc"
 ENV PATH     "$PATH:$KINCDIR/bin"
+
+# install python
+RUN apt-get install -qq -y python3-pip \
+	&& pip3 install -q argparse matplotlib numpy pandas scipy seaborn
