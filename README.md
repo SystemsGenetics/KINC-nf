@@ -4,7 +4,7 @@ The Nextflow pipeline for [KINC](https://github.com/SystemsGenetics/KINC).
 
 ## Dependencies
 
-All you need is [nextflow](https://nextflow.io/) and [Docker](https://docker.com/). On HPC systems, you can use [Singularity](https://www.sylabs.io/singularity/) in lieu of Docker. If for some reason you can't use either container software, you will have to install KINC from source.
+All you need is [nextflow](https://nextflow.io/), [Docker](https://docker.com/), and [nvidia-docker](https://github.com/NVIDIA/nvidia-docker). On HPC systems, you can use [Singularity](https://www.sylabs.io/singularity/) in lieu of Docker. If for some reason you can't use either container software, you will have to install KINC from source.
 
 ## Installation
 
