@@ -79,6 +79,8 @@ RUN git clone https://github.com/SystemsGenetics/ACE.git \
 	&& make -s qmake_all \
 	&& make -s install
 
+ENV LD_LIBRARY_PATH "/usr/local/lib:$LD_LIBRARY_PATH"
+
 # install KINC
 WORKDIR /opt
 
