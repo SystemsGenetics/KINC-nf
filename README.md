@@ -8,7 +8,10 @@ All you need is [nextflow](https://nextflow.io/), [Docker](https://docker.com/),
 
 ## Installation
 
-You don't. But if you really want to, just clone this repo.
+You don't. But you may want to copy the `nextflow.config` file from this repo so that you can customize it:
+```
+wget https://raw.githubusercontent.com/SystemsGenetics/KINC-nf/master/nextflow.config
+```
 
 ## Usage
 
