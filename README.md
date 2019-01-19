@@ -14,7 +14,7 @@ You don't. But if you really want to, just clone this repo.
 
 Use nextflow to run this pipeline. For example, here is a basic usage:
 ```
-nextflow run bentsherman/KINC-nf
+nextflow run systemsgenetics/KINC-nf
 ```
 
 This example will download this pipeline to your machine and use the default `nextflow.config` in this repo. It will assume that you have KINC installed natively, and it will process all GEM files in the `data` directory, saving all output files to the `output` directory, as defined in `nextflow.config`.
