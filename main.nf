@@ -6,6 +6,7 @@
  * Create channel for input files.
  */
 GEM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.txt", size: 1, flat: true)
+EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.emx", size: 1, flat: true)
 
 
 
@@ -28,7 +29,7 @@ process import_emx {
 		set val(dataset), file(input_file) from GEM_FILES_FOR_IMPORT_EMX
 
 	output:
-		set val(dataset), file("${dataset}.emx") into EMX_FILES
+		set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
 
 	when:
 		params.import_emx.enabled == true
@@ -46,9 +47,16 @@ process import_emx {
 
 
 /**
- * Send emx files to each process that uses them.
+ * Gather emx files and send them to each process that uses them.
  */
-EMX_FILES.into { EMX_FILES_FOR_SIMILARITY; EMX_FILES_FOR_MERGE; EMX_FILES_FOR_EXPORT; EMX_FILES_FOR_EXTRACT }
+EMX_FILES = EMX_FILES_FROM_INPUT.mix(EMX_FILES_FROM_IMPORT)
+
+EMX_FILES.into {
+	EMX_FILES_FOR_SIMILARITY;
+	EMX_FILES_FOR_MERGE;
+	EMX_FILES_FOR_EXPORT;
+	EMX_FILES_FOR_EXTRACT
+}
 
 
 
