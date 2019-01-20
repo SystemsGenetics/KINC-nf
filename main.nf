@@ -9,13 +9,17 @@ GEM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.txt", size: 
 EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.emx", size: 1, flat: true)
 CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.ccm", size: 1, flat: true)
 CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.cmx", size: 1, flat: true)
+THRESHOLD_LOGS_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-threshold.log", size: 1, flat: true)
+NET_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-net.txt", size: 1, flat: true)
 
 
 
 /**
  * Send input files to each process that uses them.
  */
-GEM_FILES_FROM_INPUT.into { GEM_FILES_FOR_IMPORT_EMX; GEM_FILES_FOR_VISUALIZE }
+GEM_FILES_FROM_INPUT
+	.filter { ! it[0].endsWith("-net") }
+	.into { GEM_FILES_FOR_IMPORT_EMX; GEM_FILES_FOR_VISUALIZE; DEBUG }
 
 
 
@@ -111,7 +115,7 @@ SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
 
 /**
  * The similarity_merge process takes the output chunks from similarity
- * and merges them into the ccm and cmx output files.
+ * and merges them into the final ccm and cmx files.
  */
 process similarity_merge {
 	tag "${dataset}"
@@ -206,7 +210,7 @@ process threshold {
 		set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD
 
 	output:
-		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS
+		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS_FROM_THRESHOLD
 
 	when:
 		params.threshold.enabled == true
@@ -226,6 +230,13 @@ process threshold {
 
 
 /**
+ * Gather threshold logs.
+ */
+THRESHOLD_LOGS = THRESHOLD_LOGS_FROM_INPUT.mix(THRESHOLD_LOGS_FROM_THRESHOLD)
+
+
+
+/**
  * The extract process takes the correlation matrix from similarity
  * and attempts to find a suitable correlation threshold.
  */
@@ -240,7 +251,7 @@ process extract {
 		set val(dataset), file(log_file) from THRESHOLD_LOGS
 
 	output:
-		set val(dataset), file("${dataset}-net.txt") into NET_FILES
+		set val(dataset), file("${dataset}-net.txt") into NET_FILES_FROM_EXTRACT
 
 	when:
 		params.extract.enabled == true
@@ -259,6 +270,13 @@ process extract {
 		   --mincorr \$THRESHOLD
 		"""
 }
+
+
+
+/**
+ * Gather network files.
+ */
+NET_FILES = NET_FILES_FROM_INPUT.mix(NET_FILES_FROM_EXTRACT)
 
 
 
