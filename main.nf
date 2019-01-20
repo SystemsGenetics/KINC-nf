@@ -51,7 +51,7 @@ process import_emx {
 
 	script:
 		"""
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run import-emx \
 			--input ${input_file} \
@@ -94,7 +94,7 @@ process export_emx {
 
 	script:
 		"""
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run export-emx \
 		   --input ${emx_file} \
@@ -123,9 +123,9 @@ process similarity_chunk {
 
 	script:
 		"""
-		kinc settings set opencl 0:0                           || echo
-		kinc settings set threads ${params.similarity.threads} || echo
-		kinc settings set logging off                          || echo
+		kinc settings set opencl 0:0                           || true
+		kinc settings set threads ${params.similarity.threads} || true
+		kinc settings set logging off                          || true
 
 		kinc chunkrun ${index} ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
@@ -169,7 +169,7 @@ process similarity_merge {
 
 	script:
 		"""
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc merge ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
@@ -206,7 +206,7 @@ process import_cmx {
 		NUM_GENES=\$(head -n -1 ${emx_file} | wc -l)
 		NUM_SAMPLES=\$(head -n 1 ${emx_file} | wc -w)
 
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run import-cmx \
 			--input ${input_file} \
@@ -265,7 +265,7 @@ process export_cmx {
 
 	script:
 		"""
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run export-cmx \
 		   --emx ${emx_file} \
@@ -296,7 +296,7 @@ process threshold {
 
 	script:
 		"""
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run rmt \
 			--input ${cmx_file} \
@@ -339,7 +339,7 @@ process extract {
 		"""
 		THRESHOLD=\$(tail -n 1 ${log_file})
 
-		kinc settings set logging off || echo
+		kinc settings set logging off || true
 
 		kinc run extract \
 		   --emx ${emx_file} \
