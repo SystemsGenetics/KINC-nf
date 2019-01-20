@@ -7,6 +7,8 @@
  */
 GEM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.txt", size: 1, flat: true)
 EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.emx", size: 1, flat: true)
+CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.ccm", size: 1, flat: true)
+CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.cmx", size: 1, flat: true)
 
 
 
@@ -61,9 +63,9 @@ EMX_FILES.into {
 
 
 /**
- * The similarity process performs a single chunk of KINC similarity.
+ * The similarity_chunk process performs a single chunk of KINC similarity.
  */
-process similarity {
+process similarity_chunk {
 	tag "${dataset}/${index}"
 	label "gpu"
 
@@ -108,10 +110,10 @@ SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
 
 
 /**
- * The merge process takes the output chunks from similarity
- * and merges them into the final output files.
+ * The similarity_merge process takes the output chunks from similarity
+ * and merges them into the ccm and cmx output files.
  */
-process merge {
+process similarity_merge {
 	tag "${dataset}"
 	publishDir "${params.output_dir}/${dataset}"
 
@@ -120,8 +122,8 @@ process merge {
 		set val(dataset), file(chunks) from SIMILARITY_CHUNKS_GROUPED
 
 	output:
-		set val(dataset), file("${dataset}.ccm") into CCM_FILES
-		set val(dataset), file("${dataset}.cmx") into CMX_FILES
+		set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY
+		set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY
 
 	script:
 		"""
@@ -137,10 +139,25 @@ process merge {
 
 
 /**
- * Send ccm, cmx files to all processes that use them.
+ * Gather ccm files and send them to all processes that use them.
  */
-CCM_FILES.into { CCM_FILES_FOR_EXPORT; CCM_FILES_FOR_EXTRACT }
-CMX_FILES.into { CMX_FILES_FOR_EXPORT; CMX_FILES_FOR_THRESHOLD; CMX_FILES_FOR_EXTRACT }
+CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY)
+
+CCM_FILES.into {
+	CCM_FILES_FOR_EXPORT;
+	CCM_FILES_FOR_EXTRACT
+}
+
+/**
+ * Gather cmx files and send them to all processes that use them.
+ */
+CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY)
+
+CMX_FILES.into {
+	CMX_FILES_FOR_EXPORT;
+	CMX_FILES_FOR_THRESHOLD;
+	CMX_FILES_FOR_EXTRACT
+}
 
 
 
