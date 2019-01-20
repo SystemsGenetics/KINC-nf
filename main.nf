@@ -5,14 +5,14 @@
 /**
  * Create channel for input files.
  */
-INPUT_FILES = Channel.fromFilePairs(params.datasets, size: 1, flat: true)
+GEM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.txt", size: 1, flat: true)
 
 
 
 /**
  * Send input files to each process that uses them.
  */
-INPUT_FILES.into { INPUT_FILES_FOR_IMPORT_EMX; INPUT_FILES_FOR_VISUALIZE }
+GEM_FILES_FROM_INPUT.into { GEM_FILES_FOR_IMPORT_EMX; GEM_FILES_FOR_VISUALIZE }
 
 
 
@@ -25,7 +25,7 @@ process import_emx {
 	publishDir "${params.output_dir}/${dataset}"
 
 	input:
-		set val(dataset), file(input_file) from INPUT_FILES_FOR_IMPORT_EMX
+		set val(dataset), file(input_file) from GEM_FILES_FOR_IMPORT_EMX
 
 	output:
 		set val(dataset), file("${dataset}.emx") into EMX_FILES
@@ -61,7 +61,7 @@ process similarity {
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY
-		each(index) from Channel.from( 0 .. params.chunks-1 )
+		each(index) from Channel.from( 0 .. params.similarity.chunks-1 )
 
 	output:
 		set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
@@ -75,7 +75,7 @@ process similarity {
 		kinc settings set threads ${params.similarity.threads} || echo
 		kinc settings set logging off                          || echo
 
-		kinc chunkrun ${index} ${params.chunks} similarity \
+		kinc chunkrun ${index} ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
 			--clusmethod ${params.similarity.clus_method} \
 			--corrmethod ${params.similarity.corr_method} \
@@ -119,7 +119,7 @@ process merge {
 		"""
 		kinc settings set logging off || echo
 
-		kinc merge ${params.chunks} similarity \
+		kinc merge ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
 			--ccm ${dataset}.ccm \
 			--cmx ${dataset}.cmx
@@ -247,7 +247,7 @@ process visualize {
 	publishDir "${params.output_dir}/${dataset}/plots"
 
 	input:
-		set val(dataset), file(emx_file) from INPUT_FILES_FOR_VISUALIZE
+		set val(dataset), file(emx_file) from GEM_FILES_FOR_VISUALIZE
 		set val(dataset), file(net_file) from NET_FILES
 
 	output:
