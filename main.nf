@@ -68,8 +68,8 @@ EMX_FILES = EMX_FILES_FROM_INPUT.mix(EMX_FILES_FROM_IMPORT)
 
 EMX_FILES.into {
 	EMX_FILES_FOR_EXPORT_EMX;
-	EMX_FILES_FOR_SIMILARITY;
-	EMX_FILES_FOR_MERGE;
+	EMX_FILES_FOR_SIMILARITY_CHUNK;
+	EMX_FILES_FOR_SIMILARITY_MERGE;
 	EMX_FILES_FOR_EXPORT_CMX;
 	EMX_FILES_FOR_EXTRACT
 }
@@ -112,7 +112,7 @@ process similarity_chunk {
 	label "gpu"
 
 	input:
-		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_CHUNK
 		each(index) from Channel.from( 0 .. params.similarity.chunks-1 )
 
 	output:
@@ -160,12 +160,12 @@ process similarity_merge {
 	publishDir "${params.output_dir}/${dataset}"
 
 	input:
-		set val(dataset), file(emx_file) from EMX_FILES_FOR_MERGE
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MERGE
 		set val(dataset), file(chunks) from SIMILARITY_CHUNKS_GROUPED
 
 	output:
-		set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY
-		set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY
+		set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY_MERGE
+		set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MERGE
 
 	script:
 		"""
@@ -224,7 +224,7 @@ process import_cmx {
 /**
  * Gather ccm files and send them to all processes that use them.
  */
-CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY, CCM_FILES_FROM_IMPORT)
+CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY_MERGE, CCM_FILES_FROM_IMPORT)
 
 CCM_FILES.into {
 	CCM_FILES_FOR_EXPORT;
@@ -234,7 +234,7 @@ CCM_FILES.into {
 /**
  * Gather cmx files and send them to all processes that use them.
  */
-CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY, CMX_FILES_FROM_IMPORT)
+CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY_MERGE, CMX_FILES_FROM_IMPORT)
 
 CMX_FILES.into {
 	CMX_FILES_FOR_EXPORT;
