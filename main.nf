@@ -70,6 +70,7 @@ EMX_FILES.into {
 	EMX_FILES_FOR_EXPORT_EMX;
 	EMX_FILES_FOR_SIMILARITY_CHUNK;
 	EMX_FILES_FOR_SIMILARITY_MERGE;
+	EMX_FILES_FOR_SIMILARITY_MPI;
 	EMX_FILES_FOR_EXPORT_CMX;
 	EMX_FILES_FOR_EXTRACT
 }
@@ -105,11 +106,19 @@ process export_emx {
 
 
 /**
+ * Make sure that similarity_chunk is using more than one chunk if enabled.
+ */
+if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
+	error "error: chunkrun cannot be run with only one chunk"
+}
+
+
+
+/**
  * The similarity_chunk process performs a single chunk of KINC similarity.
  */
 process similarity_chunk {
 	tag "${dataset}/${index}"
-	label "gpu"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_CHUNK
@@ -119,7 +128,7 @@ process similarity_chunk {
 		set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
 	when:
-		params.similarity.enabled == true
+		params.similarity.enabled == true && params.similarity.chunkrun == true
 
 	script:
 		"""
@@ -181,6 +190,48 @@ process similarity_merge {
 
 
 /**
+ * The similarity_mpi process computes an entire similarity matrix using MPI.
+ */
+process similarity_mpi {
+	tag "${dataset}"
+	publishDir "${params.output_dir}/${dataset}"
+
+	input:
+		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MPI
+
+	output:
+		set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY_MPI
+		set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MPI
+
+	when:
+		params.similarity.enabled == true && params.similarity.chunkrun == false
+
+	script:
+		"""
+		kinc settings set opencl 0:0                           || true
+		kinc settings set threads ${params.similarity.threads} || true
+		kinc settings set logging off                          || true
+
+		mpirun -np ${params.similarity.chunks} kinc run similarity \
+			--input ${emx_file} \
+			--ccm ${dataset}.ccm \
+			--cmx ${dataset}.cmx \
+			--clusmethod ${params.similarity.clus_method} \
+			--corrmethod ${params.similarity.corr_method} \
+			--minexpr ${params.similarity.min_expr} \
+			--minclus ${params.similarity.min_clus} \
+			--maxclus ${params.similarity.max_clus} \
+			--crit ${params.similarity.criterion} \
+			--preout ${params.similarity.preout} \
+			--postout ${params.similarity.postout} \
+			--mincorr ${params.similarity.min_corr} \
+			--maxcorr ${params.similarity.max_corr}
+		"""
+}
+
+
+
+/**
  * The import_cmx process converts a plain-text correlation/cluster matrix into
  * ccm and cmx files.
  */
@@ -224,7 +275,7 @@ process import_cmx {
 /**
  * Gather ccm files and send them to all processes that use them.
  */
-CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY_MERGE, CCM_FILES_FROM_IMPORT)
+CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY_MERGE, CCM_FILES_FROM_SIMILARITY_MPI, CCM_FILES_FROM_IMPORT)
 
 CCM_FILES.into {
 	CCM_FILES_FOR_EXPORT;
@@ -234,7 +285,7 @@ CCM_FILES.into {
 /**
  * Gather cmx files and send them to all processes that use them.
  */
-CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY_MERGE, CMX_FILES_FROM_IMPORT)
+CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY_MERGE, CMX_FILES_FROM_SIMILARITY_MPI, CMX_FILES_FROM_IMPORT)
 
 CMX_FILES.into {
 	CMX_FILES_FOR_EXPORT;
