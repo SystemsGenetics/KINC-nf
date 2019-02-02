@@ -94,3 +94,6 @@ RUN git clone https://github.com/SystemsGenetics/KINC.git \
 
 # install python dependencies
 RUN pip3 install -q argparse matplotlib numpy pandas scipy seaborn
+
+# return to home directory
+WORKDIR /root
