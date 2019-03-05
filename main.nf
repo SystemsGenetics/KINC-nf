@@ -115,6 +115,15 @@ if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
 
 
 /**
+ * Change similarity threads to 1 if GPU acceleration is disabled.
+ */
+if ( params.similarity.gpu == false ) {
+	params.similarity.threads = 1
+}
+
+
+
+/**
  * The similarity_chunk process performs a single chunk of KINC similarity.
  */
 process similarity_chunk {
@@ -132,9 +141,9 @@ process similarity_chunk {
 
 	script:
 		"""
-		kinc settings set opencl 0:0                           || true
-		kinc settings set threads ${params.similarity.threads} || true
-		kinc settings set logging off                          || true
+		kinc settings set opencl ${params.similarity.gpu ? "0.0" : "none"} || true
+		kinc settings set threads ${params.similarity.threads}             || true
+		kinc settings set logging off                                      || true
 
 		taskset -c 0-${params.similarity.threads-1} kinc chunkrun ${index} ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
@@ -208,9 +217,9 @@ process similarity_mpi {
 
 	script:
 		"""
-		kinc settings set opencl 0:0                           || true
-		kinc settings set threads ${params.similarity.threads} || true
-		kinc settings set logging off                          || true
+		kinc settings set opencl ${params.similarity.gpu ? "0.0" : "none"} || true
+		kinc settings set threads ${params.similarity.threads}             || true
+		kinc settings set logging off                                      || true
 
 		mpirun -np ${params.similarity.chunks} taskset -c 0-${params.similarity.threads-1} kinc run similarity \
 			--input ${emx_file} \
