@@ -156,7 +156,10 @@ process similarity_chunk {
 			--preout ${params.similarity.preout} \
 			--postout ${params.similarity.postout} \
 			--mincorr ${params.similarity.min_corr} \
-			--maxcorr ${params.similarity.max_corr}
+			--maxcorr ${params.similarity.max_corr} \
+			--bsize ${params.similarity.bsize} \
+			--gsize ${params.similarity.gsize} \
+			--lsize ${params.similarity.lsize}
 		"""
 }
 
@@ -234,7 +237,10 @@ process similarity_mpi {
 			--preout ${params.similarity.preout} \
 			--postout ${params.similarity.postout} \
 			--mincorr ${params.similarity.min_corr} \
-			--maxcorr ${params.similarity.max_corr}
+			--maxcorr ${params.similarity.max_corr} \
+			--bsize ${params.similarity.bsize} \
+			--gsize ${params.similarity.gsize} \
+			--lsize ${params.similarity.lsize}
 		"""
 }
 
