@@ -141,7 +141,7 @@ process similarity_chunk {
 
 	script:
 		"""
-		kinc settings set opencl ${params.similarity.gpu ? "0.0" : "none"} || true
+		kinc settings set opencl ${params.similarity.gpu ? "0:0" : "none"} || true
 		kinc settings set threads ${params.similarity.threads}             || true
 		kinc settings set logging off                                      || true
 
@@ -220,7 +220,7 @@ process similarity_mpi {
 
 	script:
 		"""
-		kinc settings set opencl ${params.similarity.gpu ? "0.0" : "none"} || true
+		kinc settings set opencl ${params.similarity.gpu ? "0:0" : "none"} || true
 		kinc settings set threads ${params.similarity.threads}             || true
 		kinc settings set logging off                                      || true
 
