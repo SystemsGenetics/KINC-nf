@@ -3,18 +3,18 @@
 
 
 /**
- * Create channel for input files.
+ * Create channels for input files.
  */
-EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.txt", size: 1, flat: true)
-EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.emx", size: 1, flat: true)
+EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_txt_files}", size: 1, flat: true)
+EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_files}", size: 1, flat: true)
 
-CMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-cmx.txt", size: 1, flat: true)
-CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.ccm", size: 1, flat: true)
-CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*.cmx", size: 1, flat: true)
+CMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_txt_files}", size: 1, flat: true)
+CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.ccm_files}", size: 1, flat: true)
+CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_files}", size: 1, flat: true)
 
-THRESHOLD_LOGS_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-threshold.log", size: 1, flat: true)
+RMT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.rmt_files}", size: 1, flat: true)
 
-NET_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-net.txt", size: 1, flat: true)
+NET_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.net_files}", size: 1, flat: true)
 
 
 
@@ -22,8 +22,6 @@ NET_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/*-net.txt", si
  * Send input files to each process that uses them.
  */
 EMX_TXT_FILES_FROM_INPUT
-	.filter { ! it[0].endsWith("-cmx") }
-	.filter { ! it[0].endsWith("-net") }
 	.into {
 		EMX_TXT_FILES_FOR_IMPORT_EMX;
 		EMX_TXT_FILES_FOR_IMPORT_CMX;
@@ -38,7 +36,7 @@ EMX_TXT_FILES_FROM_INPUT
  */
 process import_emx {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(input_file) from EMX_TXT_FILES_FOR_IMPORT_EMX
@@ -51,7 +49,7 @@ process import_emx {
 
 	script:
 		"""
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run import-emx \
 			--input ${input_file} \
@@ -64,16 +62,19 @@ process import_emx {
 /**
  * Gather emx files and send them to each process that uses them.
  */
-EMX_FILES = EMX_FILES_FROM_INPUT.mix(EMX_FILES_FROM_IMPORT)
-
-EMX_FILES.into {
-	EMX_FILES_FOR_EXPORT_EMX;
-	EMX_FILES_FOR_SIMILARITY_CHUNK;
-	EMX_FILES_FOR_SIMILARITY_MERGE;
-	EMX_FILES_FOR_SIMILARITY_MPI;
-	EMX_FILES_FOR_EXPORT_CMX;
-	EMX_FILES_FOR_EXTRACT
-}
+Channel.empty()
+	.mix (
+		EMX_FILES_FROM_INPUT,
+		EMX_FILES_FROM_IMPORT
+	)
+	.into {
+		EMX_FILES_FOR_EXPORT_EMX;
+		EMX_FILES_FOR_SIMILARITY_CHUNK;
+		EMX_FILES_FOR_SIMILARITY_MERGE;
+		EMX_FILES_FOR_SIMILARITY_MPI;
+		EMX_FILES_FOR_EXPORT_CMX;
+		EMX_FILES_FOR_EXTRACT
+	}
 
 
 
@@ -82,24 +83,24 @@ EMX_FILES.into {
  */
 process export_emx {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT_EMX
 
 	output:
-		set val(dataset), file("${dataset}.txt")
+		set val(dataset), file("${dataset}.emx.txt")
 
 	when:
 		params.export_emx.enabled == true
 
 	script:
 		"""
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run export-emx \
 		   --input ${emx_file} \
-		   --output ${dataset}.txt
+		   --output ${dataset}.emx.txt
 		"""
 }
 
@@ -141,9 +142,10 @@ process similarity_chunk {
 
 	script:
 		"""
-		kinc settings set opencl ${params.similarity.gpu ? "0:0" : "none"} || true
-		kinc settings set threads ${params.similarity.threads}             || true
-		kinc settings set logging off                                      || true
+		kinc settings set cuda ${params.similarity.gpu ? "0" : "none"}
+		kinc settings set opencl none
+		kinc settings set threads ${params.similarity.threads}
+		kinc settings set logging off
 
 		taskset -c 0-${params.similarity.threads-1} kinc chunkrun ${index} ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
@@ -178,7 +180,7 @@ SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
  */
 process similarity_merge {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MERGE
@@ -190,7 +192,7 @@ process similarity_merge {
 
 	script:
 		"""
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc merge ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
@@ -206,7 +208,7 @@ process similarity_merge {
  */
 process similarity_mpi {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MPI
@@ -220,9 +222,10 @@ process similarity_mpi {
 
 	script:
 		"""
-		kinc settings set opencl ${params.similarity.gpu ? "0:0" : "none"} || true
-		kinc settings set threads ${params.similarity.threads}             || true
-		kinc settings set logging off                                      || true
+		kinc settings set cuda ${params.similarity.gpu ? "0" : "none"}
+		kinc settings set opencl none
+		kinc settings set threads ${params.similarity.threads}
+		kinc settings set logging off
 
 		mpirun -np ${params.similarity.chunks} taskset -c 0-${params.similarity.threads-1} kinc run similarity \
 			--input ${emx_file} \
@@ -252,7 +255,7 @@ process similarity_mpi {
  */
 process import_cmx {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_TXT_FILES_FOR_IMPORT_CMX
@@ -267,12 +270,10 @@ process import_cmx {
 
 	script:
 		"""
-		set -x
-
 		NUM_GENES=\$(head -n -1 ${emx_file} | wc -l)
 		NUM_SAMPLES=\$(head -n 1 ${emx_file} | wc -w)
 
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run import-cmx \
 			--input ${input_file} \
@@ -290,23 +291,35 @@ process import_cmx {
 /**
  * Gather ccm files and send them to all processes that use them.
  */
-CCM_FILES = CCM_FILES_FROM_INPUT.mix(CCM_FILES_FROM_SIMILARITY_MERGE, CCM_FILES_FROM_SIMILARITY_MPI, CCM_FILES_FROM_IMPORT)
+Channel.empty()
+	.mix (
+		CCM_FILES_FROM_INPUT,
+		CCM_FILES_FROM_SIMILARITY_MERGE,
+		CCM_FILES_FROM_SIMILARITY_MPI,
+		CCM_FILES_FROM_IMPORT
+	)
+	.into {
+		CCM_FILES_FOR_EXPORT;
+		CCM_FILES_FOR_EXTRACT
+	}
 
-CCM_FILES.into {
-	CCM_FILES_FOR_EXPORT;
-	CCM_FILES_FOR_EXTRACT
-}
+
 
 /**
  * Gather cmx files and send them to all processes that use them.
  */
-CMX_FILES = CMX_FILES_FROM_INPUT.mix(CMX_FILES_FROM_SIMILARITY_MERGE, CMX_FILES_FROM_SIMILARITY_MPI, CMX_FILES_FROM_IMPORT)
-
-CMX_FILES.into {
-	CMX_FILES_FOR_EXPORT;
-	CMX_FILES_FOR_THRESHOLD;
-	CMX_FILES_FOR_EXTRACT
-}
+Channel.empty()
+	.mix (
+		CMX_FILES_FROM_INPUT,
+		CMX_FILES_FROM_SIMILARITY_MERGE,
+		CMX_FILES_FROM_SIMILARITY_MPI,
+		CMX_FILES_FROM_IMPORT
+	)
+	.into {
+		CMX_FILES_FOR_EXPORT;
+		CMX_FILES_FOR_THRESHOLD;
+		CMX_FILES_FOR_EXTRACT
+	}
 
 
 
@@ -316,7 +329,7 @@ CMX_FILES.into {
  */
 process export_cmx {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT_CMX
@@ -324,20 +337,20 @@ process export_cmx {
 		set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXPORT
 
 	output:
-		set val(dataset), file("${dataset}-cmx.txt")
+		set val(dataset), file("${dataset}.cmx.txt")
 
 	when:
 		params.export_cmx.enabled == true
 
 	script:
 		"""
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run export-cmx \
 		   --emx ${emx_file} \
 		   --ccm ${ccm_file} \
 		   --cmx ${cmx_file} \
-		   --output ${dataset}-cmx.txt
+		   --output ${dataset}.cmx.txt
 		"""
 }
 
@@ -349,25 +362,26 @@ process export_cmx {
  */
 process threshold {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD
 
 	output:
-		set val(dataset), file("${dataset}-threshold.log") into THRESHOLD_LOGS_FROM_THRESHOLD
+		set val(dataset), file("${dataset}.rmt.txt") into RMT_FILES_FROM_THRESHOLD
 
 	when:
 		params.threshold.enabled == true
 
 	script:
 		"""
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run rmt \
 			--input ${cmx_file} \
-			--log ${dataset}-threshold.log \
+			--log ${dataset}.rmt.txt \
 			--reduction ${params.threshold.reduction} \
+			--threads ${params.threshold.threads} \
 			--spline ${params.threshold.spline}
 		"""
 }
@@ -377,41 +391,41 @@ process threshold {
 /**
  * Gather threshold logs.
  */
-THRESHOLD_LOGS = THRESHOLD_LOGS_FROM_INPUT.mix(THRESHOLD_LOGS_FROM_THRESHOLD)
+RMT_FILES = RMT_FILES_FROM_INPUT.mix(RMT_FILES_FROM_THRESHOLD)
 
 
 
 /**
- * The extract process takes the correlation matrix from similarity
- * and attempts to find a suitable correlation threshold.
+ * The extract process takes the correlation matrix from similarity and
+ * extracts a network with a given threshold.
  */
 process extract {
 	tag "${dataset}"
-	publishDir "${params.output_dir}/${dataset}"
+	publishDir "${params.output.dir}/${dataset}"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
 		set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXTRACT
 		set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXTRACT
-		set val(dataset), file(log_file) from THRESHOLD_LOGS
+		set val(dataset), file(rmt_file) from RMT_FILES
 
 	output:
-		set val(dataset), file("${dataset}-net.txt") into NET_FILES_FROM_EXTRACT
+		set val(dataset), file("${dataset}.coexpnet.txt") into NET_FILES_FROM_EXTRACT
 
 	when:
 		params.extract.enabled == true
 
 	script:
 		"""
-		THRESHOLD=\$(tail -n 1 ${log_file})
+		THRESHOLD=\$(tail -n 1 ${rmt_file})
 
-		kinc settings set logging off || true
+		kinc settings set logging off
 
 		kinc run extract \
 		   --emx ${emx_file} \
 		   --ccm ${ccm_file} \
 		   --cmx ${cmx_file} \
-		   --output ${dataset}-net.txt \
+		   --output ${dataset}.coexpnet.txt \
 		   --mincorr \$THRESHOLD
 		"""
 }
@@ -432,14 +446,14 @@ NET_FILES = NET_FILES_FROM_INPUT.mix(NET_FILES_FROM_EXTRACT)
 process visualize {
 	tag "${dataset}"
 	label "python"
-	publishDir "${params.output_dir}/${dataset}/plots"
+	publishDir "${params.output.dir}/${dataset}/plots"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_TXT_FILES_FOR_VISUALIZE
 		set val(dataset), file(net_file) from NET_FILES
 
 	output:
-		set val(dataset), file("*.png") into PAIRWISE_SCATTER_PLOTS
+		set val(dataset), file("*.png")
 
 	when:
 		params.visualize.enabled == true
@@ -449,7 +463,11 @@ process visualize {
 		python3 /opt/KINC/scripts/visualize.py \
 			--emx ${emx_file} \
 			--netlist ${net_file} \
-			--output . \
-			--scale
+			--output-dir . \
+			${params.visualize.clusdist ? "--clusdist" : ""} \
+			${params.visualize.corrdist ? "--corrdist" : ""} \
+			${params.visualize.coverage ? "--coverage" : ""} \
+			${params.visualize.pairwise ? "--pairwise" : ""} \
+			${params.visualize.pw_scale ? "--pw-scale" : ""}
 		"""
 }
