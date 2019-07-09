@@ -49,6 +49,8 @@ process import_emx {
 
 	script:
 		"""
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run import-emx \
@@ -96,6 +98,8 @@ process export_emx {
 
 	script:
 		"""
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run export-emx \
@@ -192,6 +196,8 @@ process similarity_merge {
 
 	script:
 		"""
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc merge ${params.similarity.chunks} similarity \
@@ -273,6 +279,8 @@ process import_cmx {
 		NUM_GENES=\$(head -n -1 ${emx_file} | wc -l)
 		NUM_SAMPLES=\$(head -n 1 ${emx_file} | wc -w)
 
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run import-cmx \
@@ -344,6 +352,8 @@ process export_cmx {
 
 	script:
 		"""
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run export-cmx \
@@ -375,6 +385,8 @@ process threshold {
 
 	script:
 		"""
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run rmt \
@@ -419,6 +431,8 @@ process extract {
 		"""
 		THRESHOLD=\$(tail -n 1 ${rmt_file})
 
+		kinc settings set cuda none
+		kinc settings set opencl none
 		kinc settings set logging off
 
 		kinc run extract \
