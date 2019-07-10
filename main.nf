@@ -133,6 +133,7 @@ if ( params.similarity.gpu == false ) {
  */
 process similarity_chunk {
 	tag "${dataset}/${index}"
+	label "gpu"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_CHUNK
@@ -215,6 +216,7 @@ process similarity_merge {
 process similarity_mpi {
 	tag "${dataset}"
 	publishDir "${params.output.dir}/${dataset}"
+	label "gpu"
 
 	input:
 		set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MPI
