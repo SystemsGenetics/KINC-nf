@@ -2,6 +2,67 @@
 
 
 
+println """\
+
+=================================
+ K I N C - N F   P I P E L I N E
+=================================
+
+
+Workflow Information:
+---------------------
+
+  Project Directory:  ${workflow.projectDir}
+  Launch Directory:   ${workflow.launchDir}
+  Work Directory:     ${workflow.workDir}
+  Config Files:       ${workflow.configFiles}
+  Container Engine:   ${workflow.containerEngine}
+  Profiles:           ${workflow.profile}
+
+
+Execution Parameters:
+---------------------
+
+import-emx
+  enabled:      ${params.import_emx.enabled}
+
+export-emx
+  enabled:      ${params.export_emx.enabled}
+
+similarity
+  enabled:      ${params.similarity.enabled}
+  chunkrun:     ${params.similarity.chunkrun}
+  chunks:       ${params.similarity.chunks}
+  gpu:          ${params.similarity.gpu}
+  threads:      ${params.similarity.threads}
+  clus_method:  ${params.similarity.clus_method}
+  corr_method:  ${params.similarity.corr_method}
+
+import-cmx
+  enabled:      ${params.import_cmx.enabled}
+
+export-cmx
+  enabled:      ${params.export_cmx.enabled}
+
+threshold:
+  enabled:      ${params.threshold.enabled}
+  reduction:    ${params.threshold.reduction}
+  threads:      ${params.threshold.threads}
+  spline:       ${params.threshold.spline}
+
+extract:
+  enabled:      ${params.extract.enabled}
+
+visualize:
+  enabled:      ${params.visualize.enabled}
+  clusdist:     ${params.visualize.clusdist}
+  corrdist:     ${params.visualize.corrdist}
+  coverage:     ${params.visualize.coverage}
+  pairwise:     ${params.visualize.pairwise}
+"""
+
+
+
 /**
  * Create channels for input files.
  */
