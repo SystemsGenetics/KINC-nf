@@ -265,7 +265,20 @@ process similarity_merge {
 		kinc merge ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
 			--ccm ${dataset}.ccm \
-			--cmx ${dataset}.cmx
+			--cmx ${dataset}.cmx \
+			--clusmethod ${params.similarity.clus_method} \
+			--corrmethod ${params.similarity.corr_method} \
+			--minexpr ${params.similarity.min_expr} \
+			--minclus ${params.similarity.min_clus} \
+			--maxclus ${params.similarity.max_clus} \
+			--crit ${params.similarity.criterion} \
+			--preout ${params.similarity.preout} \
+			--postout ${params.similarity.postout} \
+			--mincorr ${params.similarity.min_corr} \
+			--maxcorr ${params.similarity.max_corr} \
+			--bsize ${params.similarity.bsize} \
+			--gsize ${params.similarity.gsize} \
+			--lsize ${params.similarity.lsize}
 		"""
 }
 
