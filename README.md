@@ -28,13 +28,19 @@ You can also create your own `nextflow.config` file; nextflow will check for a c
 
 To use Docker or Singularity, run nextflow with the `-with-docker` or `-with-singularity` flag. You can resume a failed run with the `-resume` flag. Consult the Nextflow documentation for more information on these and other options.
 
+## Palmetto
+
+To run KINC-nf on Palmetto, you have to use Singularity instead of Docker. First, add the singularity module:
+```bash
+# also append this command to your .bashrc
+module add singularity
+```
+
+Then whenever you run nextflow, you must tell it to use the PBS profile and Singularity:
+```bash
+nextflow run systemsgenetics/KINC-nf -profile pbs -with-singularity
+```
+
 ## Kubernetes
 
 You can run this pipeline, as well as any other nextflow pipeline, on a [Kubernetes](https://kubernetes.io/) cluster with minimal effort. Consult the [kube-runner](https://github.com/SystemsGenetics/kube-runner) repo for instructions.
-
-### Experimental GPU Support
-
-Nextflow provides experimental support for using GPUs on a Kubernetes cluster with the `gpu` directive. To use this feature, you must specify the appropriate version of Nextflow version when you run it:
-```bash
-NXF_VER=19.04.0-edge nextflow kuberun [...]
-```
