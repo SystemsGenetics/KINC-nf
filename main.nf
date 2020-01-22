@@ -213,7 +213,8 @@ process similarity_chunk {
 		kinc settings set threads ${params.similarity.threads}
 		kinc settings set logging off
 
-		taskset -c 0-${params.similarity.threads-1} kinc chunkrun ${index} ${params.similarity.chunks} similarity \
+		taskset -c 0-${params.similarity.threads-1} \
+		kinc chunkrun ${index} ${params.similarity.chunks} similarity \
 			--input ${emx_file} \
 			--clusmethod ${params.similarity.clus_method} \
 			--corrmethod ${params.similarity.corr_method} \
@@ -309,7 +310,9 @@ process similarity_mpi {
 		kinc settings set threads ${params.similarity.threads}
 		kinc settings set logging off
 
-		mpirun -np ${params.similarity.chunks} taskset -c 0-${params.similarity.threads-1} kinc run similarity \
+		mpirun -np ${params.similarity.chunks} \
+		taskset -c 0-${params.similarity.threads-1} \
+		kinc run similarity \
 			--input ${emx_file} \
 			--ccm ${dataset}.ccm \
 			--cmx ${dataset}.cmx \
