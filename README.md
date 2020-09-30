@@ -30,13 +30,7 @@ To use Docker or Singularity, run nextflow with the `-with-docker` or `-with-sin
 
 ## Palmetto
 
-To run KINC-nf on Palmetto, you have to use Singularity instead of Docker. First, add the singularity module:
-```bash
-# also append this command to your .bashrc
-module add singularity
-```
-
-Then whenever you run nextflow, you must tell it to use the PBS profile and Singularity:
+To run KINC-nf on Palmetto, you have to use Singularity instead of Docker, and to use the PBS profile:
 ```bash
 nextflow run systemsgenetics/KINC-nf -profile pbs -with-singularity
 ```
