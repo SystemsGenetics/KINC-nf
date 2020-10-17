@@ -26,9 +26,6 @@ Execution Parameters:
 import-emx
   enabled:      ${params.import_emx.enabled}
 
-export-emx
-  enabled:      ${params.export_emx.enabled}
-
 similarity
   enabled:      ${params.similarity.enabled}
   chunkrun:     ${params.similarity.chunkrun}
@@ -37,9 +34,6 @@ similarity
   threads:      ${params.similarity.threads}
   clus_method:  ${params.similarity.clus_method}
   corr_method:  ${params.similarity.corr_method}
-
-import-cmx
-  enabled:      ${params.import_cmx.enabled}
 
 export-cmx
   enabled:      ${params.export_cmx.enabled}
@@ -56,13 +50,6 @@ threshold_rmt:
 
 extract:
   enabled:      ${params.extract.enabled}
-
-visualize:
-  enabled:      ${params.visualize.enabled}
-  clusdist:     ${params.visualize.clusdist}
-  corrdist:     ${params.visualize.corrdist}
-  coverage:     ${params.visualize.coverage}
-  pairwise:     ${params.visualize.pairwise}
 """
 
 
@@ -86,30 +73,18 @@ if ( n_threshold_methods > 1 ) {
 
 
 /**
- * Create channels for input files.
+ * Create channels for input emx files.
  */
 EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_txt_files}", size: 1, flat: true)
 EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_files}", size: 1, flat: true)
 
-CMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_txt_files}", size: 1, flat: true)
-CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.ccm_files}", size: 1, flat: true)
-CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_files}", size: 1, flat: true)
-
-RMT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.rmt_files}", size: 1, flat: true)
-
-NET_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.net_files}", size: 1, flat: true)
-
 
 
 /**
- * Send input files to each process that uses them.
+ * Create channels for input cmx files.
  */
-EMX_TXT_FILES_FROM_INPUT
-    .into {
-        EMX_TXT_FILES_FOR_IMPORT_EMX;
-        EMX_TXT_FILES_FOR_IMPORT_CMX;
-        EMX_TXT_FILES_FOR_VISUALIZE
-    }
+CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.ccm_files}", size: 1, flat: true)
+CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_files}", size: 1, flat: true)
 
 
 
@@ -122,7 +97,7 @@ process import_emx {
     publishDir "${params.output.dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_txt_file) from EMX_TXT_FILES_FOR_IMPORT_EMX
+        set val(dataset), file(emx_txt_file) from EMX_TXT_FILES_FROM_INPUT
 
     output:
         set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
@@ -153,43 +128,12 @@ Channel.empty()
         EMX_FILES_FROM_IMPORT
     )
     .into {
-        EMX_FILES_FOR_EXPORT_EMX;
         EMX_FILES_FOR_SIMILARITY_CHUNK;
         EMX_FILES_FOR_SIMILARITY_MERGE;
         EMX_FILES_FOR_SIMILARITY_MPI;
         EMX_FILES_FOR_EXPORT_CMX;
         EMX_FILES_FOR_EXTRACT
     }
-
-
-
-/**
- * The export_emx process exports an emx file into the plain-text format.
- */
-process export_emx {
-    tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
-
-    input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT_EMX
-
-    output:
-        set val(dataset), file("${dataset}.emx.txt")
-
-    when:
-        params.export_emx.enabled == true
-
-    script:
-        """
-        kinc settings set cuda none
-        kinc settings set opencl none
-        kinc settings set logging off
-
-        kinc run export-emx \
-           --input ${emx_file} \
-           --output ${dataset}.emx.txt
-        """
-}
 
 
 
@@ -355,55 +299,13 @@ process similarity_mpi {
 
 
 /**
- * The import_cmx process converts a plain-text correlation/cluster matrix into
- * ccm and cmx files.
- */
-process import_cmx {
-    tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
-
-    input:
-        set val(dataset), file(emx_file) from EMX_TXT_FILES_FOR_IMPORT_CMX
-        set val(dataset), file(input_file) from CMX_TXT_FILES_FROM_INPUT
-
-    output:
-        set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_IMPORT
-        set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_IMPORT
-
-    when:
-        params.import_cmx.enabled == true
-
-    script:
-        """
-        NUM_GENES=\$(head -n -1 ${emx_file} | wc -l)
-        NUM_SAMPLES=\$(head -n 1 ${emx_file} | wc -w)
-
-        kinc settings set cuda none
-        kinc settings set opencl none
-        kinc settings set logging off
-
-        kinc run import-cmx \
-            --input ${input_file} \
-            --ccm ${dataset}.ccm \
-            --cmx ${dataset}.cmx \
-            --genes \$NUM_GENES \
-            --maxclusters ${params.import_cmx.max_clusters} \
-            --samples \$NUM_SAMPLES \
-            --corrname ${params.import_cmx.corr_name}
-        """
-}
-
-
-
-/**
  * Gather ccm files and send them to all processes that use them.
  */
 Channel.empty()
     .mix (
         CCM_FILES_FROM_INPUT,
         CCM_FILES_FROM_SIMILARITY_MERGE,
-        CCM_FILES_FROM_SIMILARITY_MPI,
-        CCM_FILES_FROM_IMPORT
+        CCM_FILES_FROM_SIMILARITY_MPI
     )
     .into {
         CCM_FILES_FOR_EXPORT;
@@ -419,8 +321,7 @@ Channel.empty()
     .mix (
         CMX_FILES_FROM_INPUT,
         CMX_FILES_FROM_SIMILARITY_MERGE,
-        CMX_FILES_FROM_SIMILARITY_MPI,
-        CMX_FILES_FROM_IMPORT
+        CMX_FILES_FROM_SIMILARITY_MPI
     )
     .into {
         CMX_FILES_FOR_EXPORT;
@@ -525,21 +426,15 @@ process threshold_rmt {
 
 
 /**
- * Gather RMT threshold logs.
- */
-RMT_FILES = RMT_FILES_FROM_INPUT.mix(THRESHOLD_FILES_FROM_RMT)
-
-
-
-/**
  * Select which threshold method to pipe into extract.
  */
 if ( params.threshold_constant.enabled == true ) {
   THRESHOLD_FILES = THRESHOLD_FILES_FROM_CONSTANT
 }
 else if ( params.threshold_rmt.enabled == true ) {
-  THRESHOLD_FILES = RMT_FILES
+  THRESHOLD_FILES = THRESHOLD_FILES_FROM_RMT
 }
+
 
 
 /**
@@ -575,48 +470,6 @@ process extract {
            --ccm ${ccm_file} \
            --cmx ${cmx_file} \
            --output ${dataset}.coexpnet.txt \
-           --mincorr \$THRESHOLD
-        """
-}
-
-
-
-/**
- * Gather network files.
- */
-NET_FILES = NET_FILES_FROM_INPUT.mix(NET_FILES_FROM_EXTRACT)
-
-
-
-/**
- * The visualize process takes extracted network files and saves the
- * pairwise scatter plots as a directory of images.
- */
-process visualize {
-    tag "${dataset}"
-    label "python"
-    publishDir "${params.output.dir}/${dataset}/plots"
-
-    input:
-        set val(dataset), file(emx_file) from EMX_TXT_FILES_FOR_VISUALIZE
-        set val(dataset), file(net_file) from NET_FILES
-
-    output:
-        set val(dataset), file("*.png")
-
-    when:
-        params.visualize.enabled == true
-
-    script:
-        """
-        python3 /opt/KINC/scripts/visualize.py \
-            --emx ${emx_file} \
-            --netlist ${net_file} \
-            --output-dir . \
-            ${params.visualize.clusdist ? "--clusdist" : ""} \
-            ${params.visualize.corrdist ? "--corrdist" : ""} \
-            ${params.visualize.coverage ? "--coverage" : ""} \
-            ${params.visualize.pairwise ? "--pairwise" : ""} \
-            ${params.visualize.pw_scale ? "--pw-scale" : ""}
+           --mincorr \${THRESHOLD}
         """
 }
