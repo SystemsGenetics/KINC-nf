@@ -44,11 +44,15 @@ import-cmx
 export-cmx
   enabled:      ${params.export_cmx.enabled}
 
-threshold:
-  enabled:      ${params.threshold.enabled}
-  reduction:    ${params.threshold.reduction}
-  threads:      ${params.threshold.threads}
-  spline:       ${params.threshold.spline}
+threshold_constant:
+  enabled:      ${params.threshold_constant.enabled}
+  threshold:    ${params.threshold_constant.threshold}
+
+threshold_rmt:
+  enabled:      ${params.threshold_rmt.enabled}
+  reduction:    ${params.threshold_rmt.reduction}
+  threads:      ${params.threshold_rmt.threads}
+  spline:       ${params.threshold_rmt.spline}
 
 extract:
   enabled:      ${params.extract.enabled}
@@ -60,6 +64,24 @@ visualize:
   coverage:     ${params.visualize.coverage}
   pairwise:     ${params.visualize.pairwise}
 """
+
+
+
+/**
+ * Make sure that no more than one threshold method has been selected.
+ */
+n_threshold_methods = 0
+
+if ( params.threshold_constant.enabled == true ) {
+  n_threshold_methods++
+}
+if ( params.threshold_rmt.enabled == true ) {
+  n_threshold_methods++
+}
+
+if ( n_threshold_methods > 1 ) {
+  error "error: no more than one threshold method may be selected"
+}
 
 
 
@@ -100,7 +122,7 @@ process import_emx {
     publishDir "${params.output.dir}/${dataset}"
 
     input:
-        set val(dataset), file(input_file) from EMX_TXT_FILES_FOR_IMPORT_EMX
+        set val(dataset), file(emx_txt_file) from EMX_TXT_FILES_FOR_IMPORT_EMX
 
     output:
         set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
@@ -115,7 +137,7 @@ process import_emx {
         kinc settings set logging off
 
         kinc run import-emx \
-            --input ${input_file} \
+            --input ${emx_txt_file} \
             --output ${dataset}.emx
         """
 }
@@ -183,7 +205,7 @@ if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
 /**
  * Change similarity threads to 1 if GPU acceleration is disabled.
  */
-if ( params.similarity.gpu == false ) {
+if ( params.similarity.gpu_model == "cpu" ) {
     params.similarity.threads = 1
 }
 
@@ -208,12 +230,11 @@ process similarity_chunk {
 
     script:
         """
-        kinc settings set cuda ${params.similarity.gpu ? "0" : "none"}
+        kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
         kinc settings set logging off
 
-        taskset -c 0-${params.similarity.threads-1} \
         kinc chunkrun ${index} ${params.similarity.chunks} similarity \
             --input ${emx_file} \
             --clusmethod ${params.similarity.clus_method} \
@@ -305,13 +326,12 @@ process similarity_mpi {
 
     script:
         """
-        kinc settings set cuda ${params.similarity.gpu ? "0" : "none"}
+        kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
         kinc settings set logging off
 
         mpirun -np ${params.similarity.chunks} \
-        taskset -c 0-${params.similarity.threads-1} \
         kinc run similarity \
             --input ${emx_file} \
             --ccm ${dataset}.ccm \
@@ -404,7 +424,8 @@ Channel.empty()
     )
     .into {
         CMX_FILES_FOR_EXPORT;
-        CMX_FILES_FOR_THRESHOLD;
+        CMX_FILES_FOR_THRESHOLD_CONSTANT;
+        CMX_FILES_FOR_THRESHOLD_RMT;
         CMX_FILES_FOR_EXTRACT
     }
 
@@ -446,21 +467,45 @@ process export_cmx {
 
 
 /**
- * The threshold process takes the correlation matrix from similarity
- * and attempts to find a suitable correlation threshold.
+ * The threshold_constant process simply writes the provided threshold to a file
+ * for the extract process.
  */
-process threshold {
+process threshold_constant {
+    tag "${dataset}"
+
+    input:
+        set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD_CONSTANT
+
+    output:
+        set val(dataset), file("threshold.txt") into THRESHOLD_FILES_FROM_CONSTANT
+
+    when:
+        params.threshold_constant.enabled == true
+
+    script:
+        """
+        echo ${params.threshold_constant.threshold} > threshold.txt
+        """
+}
+
+
+
+/**
+ * The threshold_rmt process takes the correlation matrix from similarity
+ * and attempts to find a suitable correlation threshold via the RMT method.
+ */
+process threshold_rmt {
     tag "${dataset}"
     publishDir "${params.output.dir}/${dataset}"
 
     input:
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD
+        set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD_RMT
 
     output:
-        set val(dataset), file("${dataset}.rmt.txt") into RMT_FILES_FROM_THRESHOLD
+        set val(dataset), file("${dataset}.rmt.txt") into THRESHOLD_FILES_FROM_RMT
 
     when:
-        params.threshold.enabled == true
+        params.threshold_rmt.enabled == true
 
     script:
         """
@@ -471,19 +516,30 @@ process threshold {
         kinc run rmt \
             --input ${cmx_file} \
             --log ${dataset}.rmt.txt \
-            --reduction ${params.threshold.reduction} \
-            --threads ${params.threshold.threads} \
-            --spline ${params.threshold.spline}
+            --reduction ${params.threshold_rmt.reduction} \
+            --threads ${params.threshold_rmt.threads} \
+            --spline ${params.threshold_rmt.spline}
         """
 }
 
 
 
 /**
- * Gather threshold logs.
+ * Gather RMT threshold logs.
  */
-RMT_FILES = RMT_FILES_FROM_INPUT.mix(RMT_FILES_FROM_THRESHOLD)
+RMT_FILES = RMT_FILES_FROM_INPUT.mix(THRESHOLD_FILES_FROM_RMT)
 
+
+
+/**
+ * Select which threshold method to pipe into extract.
+ */
+if ( params.threshold_constant.enabled == true ) {
+  THRESHOLD_FILES = THRESHOLD_FILES_FROM_CONSTANT
+}
+else if ( params.threshold_rmt.enabled == true ) {
+  THRESHOLD_FILES = RMT_FILES
+}
 
 
 /**
@@ -498,7 +554,7 @@ process extract {
         set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
         set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXTRACT
         set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXTRACT
-        set val(dataset), file(rmt_file) from RMT_FILES
+        set val(dataset), file(threshold_file) from THRESHOLD_FILES
 
     output:
         set val(dataset), file("${dataset}.coexpnet.txt") into NET_FILES_FROM_EXTRACT
@@ -508,7 +564,7 @@ process extract {
 
     script:
         """
-        THRESHOLD=\$(tail -n 1 ${rmt_file})
+        THRESHOLD=\$(tail -n 1 ${threshold_file})
 
         kinc settings set cuda none
         kinc settings set opencl none
