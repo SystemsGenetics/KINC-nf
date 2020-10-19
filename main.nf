@@ -107,6 +107,10 @@ process import_emx {
 
     script:
         """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE n_rows=`tail -n +1 ${emx_txt_file} | wc -l`"
+        echo "#TRACE n_cols=`head -n +1 ${emx_txt_file} | wc -w`"
+
         kinc settings set cuda none
         kinc settings set opencl none
         kinc settings set logging off
@@ -174,6 +178,11 @@ process similarity_chunk {
 
     script:
         """
+        #TRACE dataset=${dataset}
+        #TRACE gpu_model=${params.similarity.gpu_model}
+        #TRACE chunks=${params.similarity.chunks}
+        #TRACE threads=${params.similarity.threads}
+
         kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
@@ -207,6 +216,13 @@ SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
 
 
 /**
+ * Match each emx file with its corresponding ccm/cmx chunks.
+ */
+INPUTS_FOR_SIMILARITY_MERGE = EMX_FILES_FOR_SIMILARITY_MERGE.join(SIMILARITY_CHUNKS_GROUPED)
+
+
+
+/**
  * The similarity_merge process takes the output chunks from similarity
  * and merges them into the final ccm and cmx files.
  */
@@ -215,8 +231,7 @@ process similarity_merge {
     publishDir "${params.output.dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MERGE
-        set val(dataset), file(chunks) from SIMILARITY_CHUNKS_GROUPED
+        set val(dataset), file(emx_file), file(chunks) from INPUTS_FOR_SIMILARITY_MERGE
 
     output:
         set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY_MERGE
@@ -224,6 +239,10 @@ process similarity_merge {
 
     script:
         """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE chunks=${params.similarity.chunks}"
+        echo "#TRACE abd_bytes=`stat -Lc '%s' *.abd | awk '{sum += \$1} END {print sum}'`"
+
         kinc settings set cuda none
         kinc settings set opencl none
         kinc settings set logging off
@@ -270,6 +289,11 @@ process similarity_mpi {
 
     script:
         """
+        #TRACE dataset=${dataset}
+        #TRACE gpu_model=${params.similarity.gpu_model}
+        #TRACE chunks=${params.similarity.chunks}
+        #TRACE threads=${params.similarity.threads}
+
         kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
@@ -410,6 +434,9 @@ process threshold_rmt {
 
     script:
         """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${dataset}.cmx`"
+
         kinc settings set cuda none
         kinc settings set opencl none
         kinc settings set logging off
@@ -459,7 +486,13 @@ process extract {
 
     script:
         """
-        THRESHOLD=\$(tail -n 1 ${threshold_file})
+        THRESHOLD=`tail -n 1 ${threshold_file}`
+
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE emx_bytes=`stat -Lc '%s' ${dataset}.emx`"
+        echo "#TRACE ccm_bytes=`stat -Lc '%s' ${dataset}.ccm`"
+        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${dataset}.cmx`"
+        echo "#TRACE threshold=\${THRESHOLD}"
 
         kinc settings set cuda none
         kinc settings set opencl none
