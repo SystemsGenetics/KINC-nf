@@ -178,10 +178,10 @@ process similarity_chunk {
 
     script:
         """
-        #TRACE dataset=${dataset}
-        #TRACE gpu_model=${params.similarity.gpu_model}
-        #TRACE chunks=${params.similarity.chunks}
-        #TRACE threads=${params.similarity.threads}
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE gpu_model=${params.similarity.gpu_model}"
+        echo "#TRACE chunks=${params.similarity.chunks}"
+        echo "#TRACE threads=${params.similarity.threads}"
 
         kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
@@ -289,10 +289,10 @@ process similarity_mpi {
 
     script:
         """
-        #TRACE dataset=${dataset}
-        #TRACE gpu_model=${params.similarity.gpu_model}
-        #TRACE chunks=${params.similarity.chunks}
-        #TRACE threads=${params.similarity.threads}
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE gpu_model=${params.similarity.gpu_model}"
+        echo "#TRACE chunks=${params.similarity.chunks}"
+        echo "#TRACE threads=${params.similarity.threads}"
 
         kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
         kinc settings set opencl none
