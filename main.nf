@@ -30,7 +30,7 @@ similarity
   enabled:      ${params.similarity.enabled}
   chunkrun:     ${params.similarity.chunkrun}
   chunks:       ${params.similarity.chunks}
-  gpu:          ${params.similarity.gpu}
+  gpu_model:    ${params.similarity.gpu_model}
   threads:      ${params.similarity.threads}
   clus_method:  ${params.similarity.clus_method}
   corr_method:  ${params.similarity.corr_method}
