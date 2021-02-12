@@ -24,32 +24,32 @@ Execution Parameters:
 ---------------------
 
 import-emx
-  enabled:      ${params.import_emx.enabled}
+  enabled:        ${params.import_emx.enabled}
 
 similarity
-  enabled:      ${params.similarity.enabled}
-  chunkrun:     ${params.similarity.chunkrun}
-  chunks:       ${params.similarity.chunks}
-  gpu_model:    ${params.similarity.gpu_model}
-  threads:      ${params.similarity.threads}
-  clus_method:  ${params.similarity.clus_method}
-  corr_method:  ${params.similarity.corr_method}
+  enabled:        ${params.similarity.enabled}
+  chunkrun:       ${params.similarity.chunkrun}
+  chunks:         ${params.similarity.chunks}
+  hardware_type:  ${params.similarity.hardware_type}
+  threads:        ${params.similarity.threads}
+  clus_method:    ${params.similarity.clus_method}
+  corr_method:    ${params.similarity.corr_method}
 
 export-cmx
-  enabled:      ${params.export_cmx.enabled}
+  enabled:        ${params.export_cmx.enabled}
 
 threshold_constant:
-  enabled:      ${params.threshold_constant.enabled}
-  threshold:    ${params.threshold_constant.threshold}
+  enabled:        ${params.threshold_constant.enabled}
+  threshold:      ${params.threshold_constant.threshold}
 
 threshold_rmt:
-  enabled:      ${params.threshold_rmt.enabled}
-  reduction:    ${params.threshold_rmt.reduction}
-  threads:      ${params.threshold_rmt.threads}
-  spline:       ${params.threshold_rmt.spline}
+  enabled:        ${params.threshold_rmt.enabled}
+  reduction:      ${params.threshold_rmt.reduction}
+  threads:        ${params.threshold_rmt.threads}
+  spline:         ${params.threshold_rmt.spline}
 
 extract:
-  enabled:      ${params.extract.enabled}
+  enabled:        ${params.extract.enabled}
 """
 
 
@@ -153,7 +153,7 @@ if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
 /**
  * Change similarity threads to 1 if GPU acceleration is disabled.
  */
-if ( params.similarity.gpu_model == "cpu" ) {
+if ( params.similarity.hardware_type == "cpu" ) {
     params.similarity.threads = 1
 }
 
@@ -179,11 +179,11 @@ process similarity_chunk {
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE gpu_model=${params.similarity.gpu_model}"
+        echo "#TRACE hardware_type=${params.similarity.hardware_type}"
         echo "#TRACE chunks=${params.similarity.chunks}"
         echo "#TRACE threads=${params.similarity.threads}"
 
-        kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
+        kinc settings set cuda ${params.similarity.hardware_type == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
         kinc settings set logging off
@@ -290,11 +290,11 @@ process similarity_mpi {
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE gpu_model=${params.similarity.gpu_model}"
+        echo "#TRACE hardware_type=${params.similarity.hardware_type}"
         echo "#TRACE chunks=${params.similarity.chunks}"
         echo "#TRACE threads=${params.similarity.threads}"
 
-        kinc settings set cuda ${params.similarity.gpu_model == "cpu" ? "none" : "0"}
+        kinc settings set cuda ${params.similarity.hardware_type == "cpu" ? "none" : "0"}
         kinc settings set opencl none
         kinc settings set threads ${params.similarity.threads}
         kinc settings set logging off
