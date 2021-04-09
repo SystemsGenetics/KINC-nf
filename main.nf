@@ -291,7 +291,7 @@ process similarity_mpi {
         """
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE hardware_type=${params.similarity.hardware_type}"
-        echo "#TRACE chunks=${params.similarity.chunks}"
+        echo "#TRACE np=${params.similarity.chunks}"
         echo "#TRACE threads=${params.similarity.threads}"
 
         kinc settings set cuda ${params.similarity.hardware_type == "cpu" ? "none" : "0"}
@@ -460,6 +460,9 @@ if ( params.threshold_constant.enabled == true ) {
 }
 else if ( params.threshold_rmt.enabled == true ) {
   THRESHOLD_FILES = THRESHOLD_FILES_FROM_RMT
+}
+else {
+  THRESHOLD_FILES = Channel.empty()
 }
 
 
