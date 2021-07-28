@@ -38,37 +38,25 @@ similarity
 export-cmx
   enabled:        ${params.export_cmx.enabled}
 
-threshold_constant:
-  enabled:        ${params.threshold_constant.enabled}
-  threshold:      ${params.threshold_constant.threshold}
+corrpower
+  enabled:        ${params.corrpower.enabled}
+  chunks:         ${params.corrpower.chunks}
+  alpha:          ${params.corrpower.alpha}
+  power:          ${params.corrpower.power}
 
-threshold_rmt:
-  enabled:        ${params.threshold_rmt.enabled}
-  reduction:      ${params.threshold_rmt.reduction}
-  threads:        ${params.threshold_rmt.threads}
-  spline:         ${params.threshold_rmt.spline}
+cond-test
+  enabled:        ${params.cond_test.enabled}
+  chunks:         ${params.cond_test.chunks}
+  feat_tests:     ${params.cond_test.feat_tests}
+  feat_types:     ${params.cond_test.feat_types}
+  alpha:          ${params.cond_test.alpha}
+  power:          ${params.cond_test.power}
 
 extract:
   enabled:        ${params.extract.enabled}
+  filter-pvalue:  ${params.extract.filter_pvalue}
+  filter-rsquare: ${params.extract.filter_rsquare}
 """
-
-
-
-/**
- * Make sure that no more than one threshold method has been selected.
- */
-n_threshold_methods = 0
-
-if ( params.threshold_constant.enabled == true ) {
-  n_threshold_methods++
-}
-if ( params.threshold_rmt.enabled == true ) {
-  n_threshold_methods++
-}
-
-if ( n_threshold_methods > 1 ) {
-  error "error: no more than one threshold method may be selected"
-}
 
 
 
@@ -85,6 +73,13 @@ EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input
  */
 CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.ccm_files}", size: 1, flat: true)
 CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_files}", size: 1, flat: true)
+
+
+
+/**
+ * Create channels for input amx files.
+ */
+AMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.amx_files}", size: 1, flat: true)
 
 
 
@@ -136,6 +131,7 @@ Channel.empty()
         EMX_FILES_FOR_SIMILARITY_MERGE;
         EMX_FILES_FOR_SIMILARITY_MPI;
         EMX_FILES_FOR_EXPORT_CMX;
+        EMX_FILES_FOR_COND_TEST;
         EMX_FILES_FOR_EXTRACT
     }
 
@@ -193,6 +189,7 @@ process similarity_chunk {
             --clusmethod ${params.similarity.clus_method} \
             --corrmethod ${params.similarity.corr_method} \
             --minexpr ${params.similarity.min_expr} \
+            --minsamp ${params.similarity.min_samp} \
             --minclus ${params.similarity.min_clus} \
             --maxclus ${params.similarity.max_clus} \
             --crit ${params.similarity.criterion} \
@@ -254,6 +251,7 @@ process similarity_merge {
             --clusmethod ${params.similarity.clus_method} \
             --corrmethod ${params.similarity.corr_method} \
             --minexpr ${params.similarity.min_expr} \
+            --minsamp ${params.similarity.min_samp} \
             --minclus ${params.similarity.min_clus} \
             --maxclus ${params.similarity.max_clus} \
             --crit ${params.similarity.criterion} \
@@ -307,6 +305,7 @@ process similarity_mpi {
             --clusmethod ${params.similarity.clus_method} \
             --corrmethod ${params.similarity.corr_method} \
             --minexpr ${params.similarity.min_expr} \
+            --minsamp ${params.similarity.min_samp} \
             --minclus ${params.similarity.min_clus} \
             --maxclus ${params.similarity.max_clus} \
             --crit ${params.similarity.criterion} \
@@ -333,7 +332,7 @@ Channel.empty()
     )
     .into {
         CCM_FILES_FOR_EXPORT;
-        CCM_FILES_FOR_EXTRACT
+        CCM_FILES_FOR_CORRPOWER
     }
 
 
@@ -349,9 +348,7 @@ Channel.empty()
     )
     .into {
         CMX_FILES_FOR_EXPORT;
-        CMX_FILES_FOR_THRESHOLD_CONSTANT;
-        CMX_FILES_FOR_THRESHOLD_RMT;
-        CMX_FILES_FOR_EXTRACT
+        CMX_FILES_FOR_CORRPOWER
     }
 
 
@@ -392,77 +389,118 @@ process export_cmx {
 
 
 /**
- * The threshold_constant process simply writes the provided threshold to a file
- * for the extract process.
+ * The corrpower process applies power filtering to a correlation matrix.
  */
-process threshold_constant {
-    tag "${dataset}"
-
-    input:
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD_CONSTANT
-
-    output:
-        set val(dataset), file("threshold.txt") into THRESHOLD_FILES_FROM_CONSTANT
-
-    when:
-        params.threshold_constant.enabled == true
-
-    script:
-        """
-        echo ${params.threshold_constant.threshold} > threshold.txt
-        """
-}
-
-
-
-/**
- * The threshold_rmt process takes the correlation matrix from similarity
- * and attempts to find a suitable correlation threshold via the RMT method.
- */
-process threshold_rmt {
+process corrpower {
     tag "${dataset}"
     publishDir "${params.output.dir}/${dataset}"
 
     input:
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_THRESHOLD_RMT
+        set val(dataset), file(ccm_file) from CCM_FILES_FOR_CORRPOWER
+        set val(dataset), file(cmx_file) from CMX_FILES_FOR_CORRPOWER
 
     output:
-        set val(dataset), file("${dataset}.rmt.txt") into THRESHOLD_FILES_FROM_RMT
+        set val(dataset), file("${dataset}.paf.ccm") into CCM_FILES_FROM_CORRPOWER
+        set val(dataset), file("${dataset}.paf.cmx") into CMX_FILES_FROM_CORRPOWER
 
     when:
-        params.threshold_rmt.enabled == true
+        params.corrpower.enabled == true
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${dataset}.cmx`"
+        echo "#TRACE np=${params.corrpower.chunks}"
+        echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
+        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
         kinc settings set cuda none
         kinc settings set opencl none
         kinc settings set logging off
 
-        kinc run rmt \
-            --input ${cmx_file} \
-            --log ${dataset}.rmt.txt \
-            --reduction ${params.threshold_rmt.reduction} \
-            --threads ${params.threshold_rmt.threads} \
-            --spline ${params.threshold_rmt.spline}
+        mpirun -np ${params.corrpower.chunks} \
+            kinc run corrpower \
+            --ccm-in ${dataset}.ccm \
+            --cmx-in ${dataset}.cmx \
+            --ccm-out ${dataset}.paf.ccm \
+            --cmx-out ${dataset}.paf.cmx \
+            --alpha ${params.corrpower.alpha} \
+            --power ${params.corrpower.power}
         """
 }
 
 
 
 /**
- * Select which threshold method to pipe into extract.
+ * Gather filtered cmx files and send them to all processes that use them.
  */
-if ( params.threshold_constant.enabled == true ) {
-  THRESHOLD_FILES = THRESHOLD_FILES_FROM_CONSTANT
-}
-else if ( params.threshold_rmt.enabled == true ) {
-  THRESHOLD_FILES = THRESHOLD_FILES_FROM_RMT
-}
-else {
-  THRESHOLD_FILES = Channel.empty()
+Channel.empty()
+    .mix (
+        CMX_FILES_FROM_CORRPOWER
+    )
+    .into {
+        CMX_FILES_FOR_COND_TEST;
+        CMX_FILES_FOR_EXTRACT
+    }
+
+
+
+/**
+ * Gather filtered ccm files and send them to all processes that use them.
+ */
+Channel.empty()
+    .mix (
+        CCM_FILES_FROM_CORRPOWER
+    )
+    .into {
+        CCM_FILES_FOR_COND_TEST;
+        CCM_FILES_FOR_EXTRACT
+    }
+
+
+
+/**
+ * The cond_test process performs condition-specific analysis on a
+ * correlation matrix.
+ */
+process cond_test {
+    tag "${dataset}"
+    publishDir "${params.output.dir}/${dataset}"
+
+    input:
+        set val(dataset), file(emx_file) from EMX_FILES_FOR_COND_TEST
+        set val(dataset), file(ccm_file) from CCM_FILES_FOR_COND_TEST
+        set val(dataset), file(cmx_file) from CMX_FILES_FOR_COND_TEST
+        set val(dataset), file(amx_file) from AMX_FILES_FROM_INPUT
+
+    output:
+        set val(dataset), file("${dataset}.paf.csm") into CSM_FILES_FROM_COND_TEST
+
+    when:
+        params.cond_test.enabled == true
+
+    script:
+        """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE np=${params.cond_test.chunks}"
+        echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
+        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
+
+        kinc settings set cuda none
+        kinc settings set opencl none
+        kinc settings set logging off
+
+        mpirun -np ${params.cond_test.chunks} \
+            kinc run cond-test \
+            --emx ${dataset}.emx \
+            --ccm ${dataset}.paf.ccm \
+            --cmx ${dataset}.paf.cmx \
+            --amx ${amx_file} \
+            --output ${dataset}.paf.csm \
+            --feat-tests ${params.cond_test.feat_tests} \
+            --feat-types ${params.cond_test.feat_types} \
+            --alpha ${params.cond_test.alpha} \
+            --power ${params.cond_test.power}
+        """
 }
 
 
@@ -479,23 +517,20 @@ process extract {
         set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
         set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXTRACT
         set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXTRACT
-        set val(dataset), file(threshold_file) from THRESHOLD_FILES
+        set val(dataset), file(csm_file) from CSM_FILES_FROM_COND_TEST
 
     output:
-        set val(dataset), file("${dataset}.coexpnet.txt") into NET_FILES_FROM_EXTRACT
+        set val(dataset), file("${dataset}.paf-*.txt") into NET_FILES_FROM_EXTRACT
 
     when:
         params.extract.enabled == true
 
     script:
         """
-        THRESHOLD=`tail -n 1 ${threshold_file}`
-
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE emx_bytes=`stat -Lc '%s' ${dataset}.emx`"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${dataset}.ccm`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${dataset}.cmx`"
-        echo "#TRACE threshold=\${THRESHOLD}"
 
         kinc settings set cuda none
         kinc settings set opencl none
@@ -505,7 +540,12 @@ process extract {
            --emx ${emx_file} \
            --ccm ${ccm_file} \
            --cmx ${cmx_file} \
-           --output ${dataset}.coexpnet.txt \
-           --mincorr \${THRESHOLD}
+           --csm ${csm_file} \
+           --format ${params.extract.format} \
+           --output ${dataset}.paf-th${params.extract.min_corr}-p${params.extract.filter_pvalue}-rsqr${params.extract.filter_rsquare}.txt \
+           --mincorr ${params.extract.min_corr} \
+           --maxcorr ${params.extract.max_corr} \
+           --filter-pvalue ${params.extract.filter_pvalue} \
+           --filter-rsquare ${params.extract.filter_rsquare}
         """
 }
