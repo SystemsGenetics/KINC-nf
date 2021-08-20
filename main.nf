@@ -24,38 +24,38 @@ Execution Parameters:
 ---------------------
 
 import-emx
-  enabled:        ${params.import_emx.enabled}
+  enabled:        ${params.import_emx_enabled}
 
 similarity
-  enabled:        ${params.similarity.enabled}
-  chunkrun:       ${params.similarity.chunkrun}
-  chunks:         ${params.similarity.chunks}
-  hardware_type:  ${params.similarity.hardware_type}
-  threads:        ${params.similarity.threads}
-  clus_method:    ${params.similarity.clus_method}
-  corr_method:    ${params.similarity.corr_method}
+  enabled:        ${params.similarity_enabled}
+  chunkrun:       ${params.similarity_chunkrun}
+  chunks:         ${params.similarity_chunks}
+  hardware_type:  ${params.similarity_hardware_type}
+  threads:        ${params.similarity_threads}
+  clusmethod:     ${params.similarity_clusmethod}
+  corrmethod:     ${params.similarity_corrmethod}
 
 export-cmx
-  enabled:        ${params.export_cmx.enabled}
+  enabled:        ${params.export_cmx_enabled}
 
 corrpower
-  enabled:        ${params.corrpower.enabled}
-  chunks:         ${params.corrpower.chunks}
-  alpha:          ${params.corrpower.alpha}
-  power:          ${params.corrpower.power}
+  enabled:        ${params.corrpower_enabled}
+  chunks:         ${params.corrpower_chunks}
+  alpha:          ${params.corrpower_alpha}
+  power:          ${params.corrpower_power}
 
 cond-test
-  enabled:        ${params.cond_test.enabled}
-  chunks:         ${params.cond_test.chunks}
-  feat_tests:     ${params.cond_test.feat_tests}
-  feat_types:     ${params.cond_test.feat_types}
-  alpha:          ${params.cond_test.alpha}
-  power:          ${params.cond_test.power}
+  enabled:        ${params.condtest_enabled}
+  chunks:         ${params.condtest_chunks}
+  feat_tests:     ${params.condtest_feat_tests}
+  feat_types:     ${params.condtest_feat_types}
+  alpha:          ${params.condtest_alpha}
+  power:          ${params.condtest_power}
 
 extract:
-  enabled:        ${params.extract.enabled}
-  filter-pvalue:  ${params.extract.filter_pvalue}
-  filter-rsquare: ${params.extract.filter_rsquare}
+  enabled:        ${params.extract_enabled}
+  filter-pvalue:  ${params.extract_filter_pvalue}
+  filter-rsquare: ${params.extract_filter_rsquare}
 """
 
 
@@ -63,23 +63,23 @@ extract:
 /**
  * Create channels for input emx files.
  */
-EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_txt_files}", size: 1, flat: true)
-EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.emx_files}", size: 1, flat: true)
+EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.emx_txt_files}", size: 1, flat: true)
+EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.emx_files}", size: 1, flat: true)
 
 
 
 /**
  * Create channels for input cmx files.
  */
-CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.ccm_files}", size: 1, flat: true)
-CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.cmx_files}", size: 1, flat: true)
+CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.ccm_files}", size: 1, flat: true)
+CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.cmx_files}", size: 1, flat: true)
 
 
 
 /**
  * Create channels for input amx files.
  */
-AMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input.amx_files}", size: 1, flat: true)
+AMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.amx_files}", size: 1, flat: true)
 
 
 
@@ -89,7 +89,7 @@ AMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input.dir}/${params.input
  */
 process import_emx {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(emx_txt_file) from EMX_TXT_FILES_FROM_INPUT
@@ -98,7 +98,7 @@ process import_emx {
         set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
 
     when:
-        params.import_emx.enabled == true
+        params.import_emx_enabled == true
 
     script:
         """
@@ -140,7 +140,7 @@ Channel.empty()
 /**
  * Make sure that similarity_chunk is using more than one chunk if enabled.
  */
-if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
+if ( params.similarity_chunkrun == true && params.similarity_chunks == 1 ) {
     error "error: chunkrun cannot be run with only one chunk"
 }
 
@@ -149,8 +149,8 @@ if ( params.similarity.chunkrun == true && params.similarity.chunks == 1 ) {
 /**
  * Change similarity threads to 1 if GPU acceleration is disabled.
  */
-if ( params.similarity.hardware_type == "cpu" ) {
-    params.similarity.threads = 1
+if ( params.similarity_hardware_type == "cpu" ) {
+    params.similarity_threads = 1
 }
 
 
@@ -164,42 +164,42 @@ process similarity_chunk {
 
     input:
         set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_CHUNK
-        each(index) from Channel.from( 0 .. params.similarity.chunks-1 )
+        each(index) from Channel.from( 0 .. params.similarity_chunks-1 )
 
     output:
         set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
     when:
-        params.similarity.enabled == true && params.similarity.chunkrun == true
+        params.similarity_enabled == true && params.similarity_chunkrun == true
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE hardware_type=${params.similarity.hardware_type}"
-        echo "#TRACE chunks=${params.similarity.chunks}"
-        echo "#TRACE threads=${params.similarity.threads}"
+        echo "#TRACE hardware_type=${params.similarity_hardware_type}"
+        echo "#TRACE chunks=${params.similarity_chunks}"
+        echo "#TRACE threads=${params.similarity_threads}"
 
-        kinc settings set cuda ${params.similarity.hardware_type == "cpu" ? "none" : "0"}
+        kinc settings set cuda ${params.similarity_hardware_type == "cpu" ? "none" : "0"}
         kinc settings set opencl none
-        kinc settings set threads ${params.similarity.threads}
+        kinc settings set threads ${params.similarity_threads}
         kinc settings set logging off
 
-        kinc chunkrun ${index} ${params.similarity.chunks} similarity \
+        kinc chunkrun ${index} ${params.similarity_chunks} similarity \
             --input ${emx_file} \
-            --clusmethod ${params.similarity.clus_method} \
-            --corrmethod ${params.similarity.corr_method} \
-            --minexpr ${params.similarity.min_expr} \
-            --minsamp ${params.similarity.min_samp} \
-            --minclus ${params.similarity.min_clus} \
-            --maxclus ${params.similarity.max_clus} \
-            --crit ${params.similarity.criterion} \
-            --preout ${params.similarity.preout} \
-            --postout ${params.similarity.postout} \
-            --mincorr ${params.similarity.min_corr} \
-            --maxcorr ${params.similarity.max_corr} \
-            --bsize ${params.similarity.bsize} \
-            --gsize ${params.similarity.gsize} \
-            --lsize ${params.similarity.lsize}
+            --clusmethod ${params.similarity_clusmethod} \
+            --corrmethod ${params.similarity_corrmethod} \
+            --minexpr ${params.similarity_minexpr} \
+            --minsamp ${params.similarity_minsamp} \
+            --minclus ${params.similarity_minclus} \
+            --maxclus ${params.similarity_maxclus} \
+            --crit ${params.similarity_criterion} \
+            --preout ${params.similarity_preout} \
+            --postout ${params.similarity_postout} \
+            --mincorr ${params.similarity_mincorr} \
+            --maxcorr ${params.similarity_maxcorr} \
+            --bsize ${params.similarity_bsize} \
+            --gsize ${params.similarity_gsize} \
+            --lsize ${params.similarity_lsize}
         """
 }
 
@@ -225,7 +225,7 @@ INPUTS_FOR_SIMILARITY_MERGE = EMX_FILES_FOR_SIMILARITY_MERGE.join(SIMILARITY_CHU
  */
 process similarity_merge {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(emx_file), file(chunks) from INPUTS_FOR_SIMILARITY_MERGE
@@ -237,31 +237,31 @@ process similarity_merge {
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE chunks=${params.similarity.chunks}"
+        echo "#TRACE chunks=${params.similarity_chunks}"
         echo "#TRACE abd_bytes=`stat -Lc '%s' *.abd | awk '{sum += \$1} END {print sum}'`"
 
         kinc settings set cuda none
         kinc settings set opencl none
         kinc settings set logging off
 
-        kinc merge ${params.similarity.chunks} similarity \
+        kinc merge ${params.similarity_chunks} similarity \
             --input ${emx_file} \
             --ccm ${dataset}.ccm \
             --cmx ${dataset}.cmx \
-            --clusmethod ${params.similarity.clus_method} \
-            --corrmethod ${params.similarity.corr_method} \
-            --minexpr ${params.similarity.min_expr} \
-            --minsamp ${params.similarity.min_samp} \
-            --minclus ${params.similarity.min_clus} \
-            --maxclus ${params.similarity.max_clus} \
-            --crit ${params.similarity.criterion} \
-            --preout ${params.similarity.preout} \
-            --postout ${params.similarity.postout} \
-            --mincorr ${params.similarity.min_corr} \
-            --maxcorr ${params.similarity.max_corr} \
-            --bsize ${params.similarity.bsize} \
-            --gsize ${params.similarity.gsize} \
-            --lsize ${params.similarity.lsize}
+            --clusmethod ${params.similarity_clusmethod} \
+            --corrmethod ${params.similarity_corrmethod} \
+            --minexpr ${params.similarity_minexpr} \
+            --minsamp ${params.similarity_minsamp} \
+            --minclus ${params.similarity_minclus} \
+            --maxclus ${params.similarity_maxclus} \
+            --crit ${params.similarity_criterion} \
+            --preout ${params.similarity_preout} \
+            --postout ${params.similarity_postout} \
+            --mincorr ${params.similarity_mincorr} \
+            --maxcorr ${params.similarity_maxcorr} \
+            --bsize ${params.similarity_bsize} \
+            --gsize ${params.similarity_gsize} \
+            --lsize ${params.similarity_lsize}
         """
 }
 
@@ -272,7 +272,7 @@ process similarity_merge {
  */
 process similarity_mpi {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
     label "gpu"
 
     input:
@@ -283,39 +283,39 @@ process similarity_mpi {
         set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MPI
 
     when:
-        params.similarity.enabled == true && params.similarity.chunkrun == false
+        params.similarity_enabled == true && params.similarity_chunkrun == false
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE hardware_type=${params.similarity.hardware_type}"
-        echo "#TRACE np=${params.similarity.chunks}"
-        echo "#TRACE threads=${params.similarity.threads}"
+        echo "#TRACE hardware_type=${params.similarity_hardware_type}"
+        echo "#TRACE np=${params.similarity_chunks}"
+        echo "#TRACE threads=${params.similarity_threads}"
 
-        kinc settings set cuda ${params.similarity.hardware_type == "cpu" ? "none" : "0"}
+        kinc settings set cuda ${params.similarity_hardware_type == "cpu" ? "none" : "0"}
         kinc settings set opencl none
-        kinc settings set threads ${params.similarity.threads}
+        kinc settings set threads ${params.similarity_threads}
         kinc settings set logging off
 
-        mpirun -np ${params.similarity.chunks} \
+        mpirun -np ${params.similarity_chunks} \
         kinc run similarity \
             --input ${emx_file} \
             --ccm ${dataset}.ccm \
             --cmx ${dataset}.cmx \
-            --clusmethod ${params.similarity.clus_method} \
-            --corrmethod ${params.similarity.corr_method} \
-            --minexpr ${params.similarity.min_expr} \
-            --minsamp ${params.similarity.min_samp} \
-            --minclus ${params.similarity.min_clus} \
-            --maxclus ${params.similarity.max_clus} \
-            --crit ${params.similarity.criterion} \
-            --preout ${params.similarity.preout} \
-            --postout ${params.similarity.postout} \
-            --mincorr ${params.similarity.min_corr} \
-            --maxcorr ${params.similarity.max_corr} \
-            --bsize ${params.similarity.bsize} \
-            --gsize ${params.similarity.gsize} \
-            --lsize ${params.similarity.lsize}
+            --clusmethod ${params.similarity_clusmethod} \
+            --corrmethod ${params.similarity_corrmethod} \
+            --minexpr ${params.similarity_minexpr} \
+            --minsamp ${params.similarity_minsamp} \
+            --minclus ${params.similarity_minclus} \
+            --maxclus ${params.similarity_maxclus} \
+            --crit ${params.similarity_criterion} \
+            --preout ${params.similarity_preout} \
+            --postout ${params.similarity_postout} \
+            --mincorr ${params.similarity_mincorr} \
+            --maxcorr ${params.similarity_maxcorr} \
+            --bsize ${params.similarity_bsize} \
+            --gsize ${params.similarity_gsize} \
+            --lsize ${params.similarity_lsize}
         """
 }
 
@@ -359,7 +359,7 @@ Channel.empty()
  */
 process export_cmx {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT_CMX
@@ -370,7 +370,7 @@ process export_cmx {
         set val(dataset), file("${dataset}.cmx.txt")
 
     when:
-        params.export_cmx.enabled == true
+        params.export_cmx_enabled == true
 
     script:
         """
@@ -393,7 +393,7 @@ process export_cmx {
  */
 process corrpower {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(ccm_file) from CCM_FILES_FOR_CORRPOWER
@@ -404,12 +404,12 @@ process corrpower {
         set val(dataset), file("${dataset}.paf.cmx") into CMX_FILES_FROM_CORRPOWER
 
     when:
-        params.corrpower.enabled == true
+        params.corrpower_enabled == true
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE np=${params.corrpower.chunks}"
+        echo "#TRACE np=${params.corrpower_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
@@ -417,14 +417,14 @@ process corrpower {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun -np ${params.corrpower.chunks} \
+        mpirun -np ${params.corrpower_chunks} \
             kinc run corrpower \
             --ccm-in ${dataset}.ccm \
             --cmx-in ${dataset}.cmx \
             --ccm-out ${dataset}.paf.ccm \
             --cmx-out ${dataset}.paf.cmx \
-            --alpha ${params.corrpower.alpha} \
-            --power ${params.corrpower.power}
+            --alpha ${params.corrpower_alpha} \
+            --power ${params.corrpower_power}
         """
 }
 
@@ -459,12 +459,12 @@ Channel.empty()
 
 
 /**
- * The cond_test process performs condition-specific analysis on a
+ * The condtest process performs condition-specific analysis on a
  * correlation matrix.
  */
-process cond_test {
+process condtest {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(emx_file) from EMX_FILES_FOR_COND_TEST
@@ -476,12 +476,12 @@ process cond_test {
         set val(dataset), file("${dataset}.paf.csm") into CSM_FILES_FROM_COND_TEST
 
     when:
-        params.cond_test.enabled == true
+        params.condtest_enabled == true
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE np=${params.cond_test.chunks}"
+        echo "#TRACE np=${params.condtest_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
@@ -489,17 +489,17 @@ process cond_test {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun -np ${params.cond_test.chunks} \
+        mpirun -np ${params.condtest_chunks} \
             kinc run cond-test \
             --emx ${dataset}.emx \
             --ccm ${dataset}.paf.ccm \
             --cmx ${dataset}.paf.cmx \
             --amx ${amx_file} \
             --output ${dataset}.paf.csm \
-            --feat-tests ${params.cond_test.feat_tests} \
-            --feat-types ${params.cond_test.feat_types} \
-            --alpha ${params.cond_test.alpha} \
-            --power ${params.cond_test.power}
+            --feat-tests ${params.condtest_feat_tests} \
+            --feat-types ${params.condtest_feat_types} \
+            --alpha ${params.condtest_alpha} \
+            --power ${params.condtest_power}
         """
 }
 
@@ -511,7 +511,7 @@ process cond_test {
  */
 process extract {
     tag "${dataset}"
-    publishDir "${params.output.dir}/${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
 
     input:
         set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
@@ -523,7 +523,7 @@ process extract {
         set val(dataset), file("${dataset}.paf-*.txt") into NET_FILES_FROM_EXTRACT
 
     when:
-        params.extract.enabled == true
+        params.extract_enabled == true
 
     script:
         """
@@ -541,11 +541,11 @@ process extract {
            --ccm ${ccm_file} \
            --cmx ${cmx_file} \
            --csm ${csm_file} \
-           --format ${params.extract.format} \
-           --output ${dataset}.paf-th${params.extract.min_corr}-p${params.extract.filter_pvalue}-rsqr${params.extract.filter_rsquare}.txt \
-           --mincorr ${params.extract.min_corr} \
-           --maxcorr ${params.extract.max_corr} \
-           --filter-pvalue ${params.extract.filter_pvalue} \
-           --filter-rsquare ${params.extract.filter_rsquare}
+           --format ${params.extract_format} \
+           --output ${dataset}.paf-th${params.extract_mincorr}-p${params.extract_filter_pvalue}-rsqr${params.extract_filter_rsquare}.txt \
+           --mincorr ${params.extract_mincorr} \
+           --maxcorr ${params.extract_maxcorr} \
+           --filter-pvalue ${params.extract_filter_pvalue} \
+           --filter-rsquare ${params.extract_filter_rsquare}
         """
 }
