@@ -8,31 +8,33 @@ All you need is [nextflow](https://nextflow.io/), [Docker](https://docker.com/),
 
 ## Installation
 
-You don't. But you may want to copy the `nextflow.config` file from this repo so that you can customize it:
-```
-wget https://raw.githubusercontent.com/SystemsGenetics/KINC-nf/master/nextflow.config
-```
+You don't. But you may want to refer to the [config file](https://github.com/SystemsGenetics/KINC-nf/blob/master/nextflow.config) on GitHub file and familiarize yourself with the available settings.
 
 ## Usage
 
-Use nextflow to run this pipeline. For example, here is a basic usage:
-```
-nextflow run systemsgenetics/KINC-nf
+You can run the pipeline out-of-the-box with Nextflow. We also provide some example data to get you started. Here's how to run KINC on the example data:
+```bash
+nextflow run systemsgenetics/kinc-nf -profile example,<docker|singularity>
 ```
 
-This example will download this pipeline to your machine and use the default `nextflow.config` in this repo. It will assume that you have KINC installed natively, and it will process all GEM files in the `input` directory, saving all output files to the `output` directory, as defined in `nextflow.config`.
+This example will download the pipeline repository, the example data, and the Docker/Singularity container for KINC, and run kINC on the example data. The results will be saved to `./output`.
 
 KINC-nf detects input files by their file extension. For example, the default extension for GEM files is `*.emx.txt`, so make sure that your input GEMs have this extension before running the pipeline. You can also place intermediate files in the input directory, and KINC-nf will use them as inputs to the appropriate processes. For example, you can provide the `*.emx` file created by `import_emx` instead of the plain-text GEM and KINC-nf will skip the `import_emx` step.
 
-You can also create your own `nextflow.config` file; nextflow will check for a config file in your current directory before defaulting to config file in this repo. You will most likely need to customize this config file as it provides options such as which analytics to run, how many chunks to use where applicable, and various other command-line parameters for KINC. The config file also allows you to define your own "profiles" for running this pipeline in different environments. Consult the Nextflow documentation for more information on what environments are supported.
+You can specify any of the params in `nextflow.config` as command-line arguments, for example:
+```bash
+nextflow run systemsgenetics/kinc-nf \
+    --similarity_chunks 1 \
+    --similarity_hardware_type gpu
+```
 
-To use Docker or Singularity, run nextflow with the `-with-docker` or `-with-singularity` flag. You can resume a failed run with the `-resume` flag. Consult the Nextflow documentation for more information on these and other options.
+The params allow you to control which analytics to run, how many chunks to use where applicable, and various other command-line parameters for KINC. You can resume a failed run with the `-resume` flag. Consult the Nextflow documentation for more information on these and other options.
 
 ## Palmetto
 
-To run KINC-nf on Palmetto, you have to use Singularity instead of Docker, and to use the PBS profile:
+To run KINC-nf on Palmetto, you have to use Singularity instead of Docker, and use the `pbs` profile:
 ```bash
-nextflow run systemsgenetics/KINC-nf -profile pbs -with-singularity
+nextflow run systemsgenetics/kinc-nf -profile pbs,singularity
 ```
 
 ## Kubernetes
