@@ -24,10 +24,10 @@ Execution Parameters:
 ---------------------
 
 import-emx
-  enabled:        ${params.import_emx_enabled}
+  enabled:        ${params.import_emx}
 
 similarity
-  enabled:        ${params.similarity_enabled}
+  enabled:        ${params.similarity}
   chunkrun:       ${params.similarity_chunkrun}
   chunks:         ${params.similarity_chunks}
   hardware_type:  ${params.similarity_hardware_type}
@@ -36,16 +36,16 @@ similarity
   corrmethod:     ${params.similarity_corrmethod}
 
 export-cmx
-  enabled:        ${params.export_cmx_enabled}
+  enabled:        ${params.export_cmx}
 
 corrpower
-  enabled:        ${params.corrpower_enabled}
+  enabled:        ${params.corrpower}
   chunks:         ${params.corrpower_chunks}
   alpha:          ${params.corrpower_alpha}
   power:          ${params.corrpower_power}
 
 cond-test
-  enabled:        ${params.condtest_enabled}
+  enabled:        ${params.condtest}
   chunks:         ${params.condtest_chunks}
   feat_tests:     ${params.condtest_feat_tests}
   feat_types:     ${params.condtest_feat_types}
@@ -53,7 +53,7 @@ cond-test
   power:          ${params.condtest_power}
 
 extract:
-  enabled:        ${params.extract_enabled}
+  enabled:        ${params.extract}
   filter-pvalue:  ${params.extract_filter_pvalue}
   filter-rsquare: ${params.extract_filter_rsquare}
 """
@@ -98,7 +98,7 @@ process import_emx {
         set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
 
     when:
-        params.import_emx_enabled == true
+        params.import_emx == true
 
     script:
         """
@@ -170,7 +170,7 @@ process similarity_chunk {
         set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
 
     when:
-        params.similarity_enabled == true && params.similarity_chunkrun == true
+        params.similarity == true && params.similarity_chunkrun == true
 
     script:
         """
@@ -283,7 +283,7 @@ process similarity_mpi {
         set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MPI
 
     when:
-        params.similarity_enabled == true && params.similarity_chunkrun == false
+        params.similarity == true && params.similarity_chunkrun == false
 
     script:
         """
@@ -370,7 +370,7 @@ process export_cmx {
         set val(dataset), file("${dataset}.cmx.txt")
 
     when:
-        params.export_cmx_enabled == true
+        params.export_cmx == true
 
     script:
         """
@@ -404,7 +404,7 @@ process corrpower {
         set val(dataset), file("${dataset}.paf.cmx") into CMX_FILES_FROM_CORRPOWER
 
     when:
-        params.corrpower_enabled == true
+        params.corrpower == true
 
     script:
         """
@@ -476,7 +476,7 @@ process condtest {
         set val(dataset), file("${dataset}.paf.csm") into CSM_FILES_FROM_COND_TEST
 
     when:
-        params.condtest_enabled == true
+        params.condtest == true
 
     script:
         """
@@ -523,7 +523,7 @@ process extract {
         set val(dataset), file("${dataset}.paf-*.txt") into NET_FILES_FROM_EXTRACT
 
     when:
-        params.extract_enabled == true
+        params.extract == true
 
     script:
         """

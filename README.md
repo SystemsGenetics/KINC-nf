@@ -32,9 +32,9 @@ The params allow you to control which analytics to run, how many chunks to use w
 
 ## Palmetto
 
-To run KINC-nf on Palmetto, you have to use Singularity instead of Docker, and use the `pbs` profile:
+To run KINC-nf on Palmetto, you have to use Singularity instead of Docker, and use the `palmetto` profile:
 ```bash
-nextflow run systemsgenetics/kinc-nf -profile pbs,singularity
+nextflow run systemsgenetics/kinc-nf -profile palmetto,singularity
 ```
 
 ## Kubernetes
