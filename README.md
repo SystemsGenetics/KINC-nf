@@ -17,7 +17,7 @@ You can run the pipeline out-of-the-box with Nextflow. We also provide some exam
 nextflow run systemsgenetics/kinc-nf -profile example,<docker|singularity>
 ```
 
-This example will download the pipeline repository, the example data, and the Docker/Singularity container for KINC, and run kINC on the example data. The results will be saved to `./output`.
+This example will download the pipeline repository, the example data, and the Docker/Singularity container for KINC, and run KINC on the example data. The results will be saved to `./output`.
 
 KINC-nf detects input files by their file extension. For example, the default extension for GEM files is `*.emx.txt`, so make sure that your input GEMs have this extension before running the pipeline. You can also place intermediate files in the input directory, and KINC-nf will use them as inputs to the appropriate processes. For example, you can provide the `*.emx` file created by `import_emx` instead of the plain-text GEM and KINC-nf will skip the `import_emx` step.
 
