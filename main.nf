@@ -1,9 +1,11 @@
 #!/usr/bin/env nextflow
 
+nextflow.enable.dsl=2
 
 
-println """\
 
+println \
+"""
 =================================
  K I N C - N F   P I P E L I N E
 =================================
@@ -60,26 +62,87 @@ extract:
 
 
 
-/**
- * Create channels for input emx files.
- */
-EMX_TXT_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.emx_txt_files}", size: 1, flat: true)
-EMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.emx_files}", size: 1, flat: true)
+workflow {
+    // load input files
+    emx_txt_files = Channel.fromFilePairs("${params.input_dir}/${params.emx_txt_files}", size: 1, flat: true)
+    emx_files = Channel.fromFilePairs("${params.input_dir}/${params.emx_files}", size: 1, flat: true)
+    ccm_files = Channel.fromFilePairs("${params.input_dir}/${params.ccm_files}", size: 1, flat: true)
+    cmx_files = Channel.fromFilePairs("${params.input_dir}/${params.cmx_files}", size: 1, flat: true)
+    amx_files = Channel.fromFilePairs("${params.input_dir}/${params.amx_files}", size: 1, flat: true)
 
+    // import emx files if specified
+    if ( params.import_emx == true ) {
+        import_emx(emx_txt_files)
 
+        emx_files = emx_files.mix(import_emx.out.emx_files)
+    }
 
-/**
- * Create channels for input cmx files.
- */
-CCM_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.ccm_files}", size: 1, flat: true)
-CMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.cmx_files}", size: 1, flat: true)
+    // make sure that similarity_chunk is using more than one chunk if enabled
+    if ( params.similarity_chunkrun == true && params.similarity_chunks == 1 ) {
+        error "error: chunkrun cannot be run with only one chunk"
+    }
 
+    // change similarity threads to 1 if GPU acceleration is not enabled
+    if ( params.similarity_hardware_type == "cpu" ) {
+        params.similarity_threads = 1
+    }
 
+    // perform similarity_chunk if specified
+    if ( params.similarity == true && params.similarity_chunkrun == true ) {
+        // process similarity chunks
+        indices = Channel.from( 0 .. params.similarity_chunks-1 )
+        similarity_chunk(emx_files, indices)
 
-/**
- * Create channels for input amx files.
- */
-AMX_FILES_FROM_INPUT = Channel.fromFilePairs("${params.input_dir}/${params.amx_files}", size: 1, flat: true)
+        // merge similarity chunks into a list
+        chunks = similarity_chunk.out.chunks.groupTuple()
+
+        // match each emx file with corresponding ccm/cmx chunks
+        merge_inputs = emx_files.join(chunks)
+
+        // merge chunks into ccm/cmx files
+        similarity_merge(merge_inputs)
+
+        ccm_files = ccm_files.mix(similarity_merge.out.ccm_files)
+        cmx_files = cmx_files.mix(similarity_merge.out.cmx_files)
+    }
+
+    // perform similarity_mpi if specified
+    if ( params.similarity == true && params.similarity_chunkrun == false ) {
+        similarity_mpi(emx_files)
+
+        ccm_files = ccm_files.mix(similarity_mpi.out.ccm_files)
+        cmx_files = cmx_files.mix(similarity_mpi.out.cmx_files)
+    }
+
+    // export cmx files if specified
+    if ( params.export_cmx == true ) {
+        export_cmx(emx_files, ccm_files, cmx_files)
+    }
+
+    // perform correlation power analysis if specified
+    if ( params.corrpower == true ) {
+        corrpower(ccm_files, cmx_files)
+
+        paf_ccm_files = corrpower.out.ccm_files
+        paf_cmx_files = corrpower.out.cmx_files
+    }
+    else {
+        paf_ccm_files = Channel.empty()
+        paf_cmx_files = Channel.empty()
+    }
+
+    // perform condition testing if specified
+    if ( params.condtest == true ) {
+        condtest(emx_files, paf_ccm_files, paf_cmx_files, amx_files)
+
+        csm_files = condtest.out.csm_files
+    }
+
+    // extract network files if specified
+    if ( params.extract == true ) {
+        extract(emx_files, paf_ccm_files, paf_cmx_files, csm_files)
+    }
+}
 
 
 
@@ -92,13 +155,10 @@ process import_emx {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_txt_file) from EMX_TXT_FILES_FROM_INPUT
+        tuple val(dataset), path(emx_txt_file)
 
     output:
-        set val(dataset), file("${dataset}.emx") into EMX_FILES_FROM_IMPORT
-
-    when:
-        params.import_emx == true
+        tuple val(dataset), path("${dataset}.emx"), emit: emx_files
 
     script:
         """
@@ -119,43 +179,6 @@ process import_emx {
 
 
 /**
- * Gather emx files and send them to each process that uses them.
- */
-Channel.empty()
-    .mix (
-        EMX_FILES_FROM_INPUT,
-        EMX_FILES_FROM_IMPORT
-    )
-    .into {
-        EMX_FILES_FOR_SIMILARITY_CHUNK;
-        EMX_FILES_FOR_SIMILARITY_MERGE;
-        EMX_FILES_FOR_SIMILARITY_MPI;
-        EMX_FILES_FOR_EXPORT_CMX;
-        EMX_FILES_FOR_COND_TEST;
-        EMX_FILES_FOR_EXTRACT
-    }
-
-
-
-/**
- * Make sure that similarity_chunk is using more than one chunk if enabled.
- */
-if ( params.similarity_chunkrun == true && params.similarity_chunks == 1 ) {
-    error "error: chunkrun cannot be run with only one chunk"
-}
-
-
-
-/**
- * Change similarity threads to 1 if GPU acceleration is disabled.
- */
-if ( params.similarity_hardware_type == "cpu" ) {
-    params.similarity_threads = 1
-}
-
-
-
-/**
  * The similarity_chunk process performs a single chunk of KINC similarity.
  */
 process similarity_chunk {
@@ -163,14 +186,11 @@ process similarity_chunk {
     label "gpu"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_CHUNK
-        each(index) from Channel.from( 0 .. params.similarity_chunks-1 )
+        tuple val(dataset), path(emx_file)
+        each index
 
     output:
-        set val(dataset), file("*.abd") into SIMILARITY_CHUNKS
-
-    when:
-        params.similarity == true && params.similarity_chunkrun == true
+        tuple val(dataset), path("*.abd"), emit: chunks
 
     script:
         """
@@ -206,20 +226,6 @@ process similarity_chunk {
 
 
 /**
- * Merge output chunks from similarity into a list.
- */
-SIMILARITY_CHUNKS_GROUPED = SIMILARITY_CHUNKS.groupTuple()
-
-
-
-/**
- * Match each emx file with its corresponding ccm/cmx chunks.
- */
-INPUTS_FOR_SIMILARITY_MERGE = EMX_FILES_FOR_SIMILARITY_MERGE.join(SIMILARITY_CHUNKS_GROUPED)
-
-
-
-/**
  * The similarity_merge process takes the output chunks from similarity
  * and merges them into the final ccm and cmx files.
  */
@@ -228,11 +234,11 @@ process similarity_merge {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_file), file(chunks) from INPUTS_FOR_SIMILARITY_MERGE
+        tuple val(dataset), path(emx_file), path(chunks)
 
     output:
-        set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY_MERGE
-        set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MERGE
+        tuple val(dataset), path("${dataset}.ccm"), emit: ccm_files
+        tuple val(dataset), path("${dataset}.cmx"), emit: cmx_files
 
     script:
         """
@@ -276,14 +282,11 @@ process similarity_mpi {
     label "gpu"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_SIMILARITY_MPI
+        tuple val(dataset), path(emx_file)
 
     output:
-        set val(dataset), file("${dataset}.ccm") into CCM_FILES_FROM_SIMILARITY_MPI
-        set val(dataset), file("${dataset}.cmx") into CMX_FILES_FROM_SIMILARITY_MPI
-
-    when:
-        params.similarity == true && params.similarity_chunkrun == false
+        tuple val(dataset), path("${dataset}.ccm"), emit: ccm_files
+        tuple val(dataset), path("${dataset}.cmx"), emit: cmx_files
 
     script:
         """
@@ -322,38 +325,6 @@ process similarity_mpi {
 
 
 /**
- * Gather ccm files and send them to all processes that use them.
- */
-Channel.empty()
-    .mix (
-        CCM_FILES_FROM_INPUT,
-        CCM_FILES_FROM_SIMILARITY_MERGE,
-        CCM_FILES_FROM_SIMILARITY_MPI
-    )
-    .into {
-        CCM_FILES_FOR_EXPORT;
-        CCM_FILES_FOR_CORRPOWER
-    }
-
-
-
-/**
- * Gather cmx files and send them to all processes that use them.
- */
-Channel.empty()
-    .mix (
-        CMX_FILES_FROM_INPUT,
-        CMX_FILES_FROM_SIMILARITY_MERGE,
-        CMX_FILES_FROM_SIMILARITY_MPI
-    )
-    .into {
-        CMX_FILES_FOR_EXPORT;
-        CMX_FILES_FOR_CORRPOWER
-    }
-
-
-
-/**
  * The export_cmx process exports the ccm and cmx files from similarity
  * into a plain-text format.
  */
@@ -362,15 +333,12 @@ process export_cmx {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_EXPORT_CMX
-        set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXPORT
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXPORT
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(ccm_file)
+        tuple val(dataset), path(cmx_file)
 
     output:
-        set val(dataset), file("${dataset}.cmx.txt")
-
-    when:
-        params.export_cmx == true
+        tuple val(dataset), path("${dataset}.cmx.txt"), emit: cmx_txt_files
 
     script:
         """
@@ -396,15 +364,12 @@ process corrpower {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(ccm_file) from CCM_FILES_FOR_CORRPOWER
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_CORRPOWER
+        tuple val(dataset), path(ccm_file)
+        tuple val(dataset), path(cmx_file)
 
     output:
-        set val(dataset), file("${dataset}.paf.ccm") into CCM_FILES_FROM_CORRPOWER
-        set val(dataset), file("${dataset}.paf.cmx") into CMX_FILES_FROM_CORRPOWER
-
-    when:
-        params.corrpower == true
+        tuple val(dataset), path("${dataset}.paf.ccm"), emit: ccm_files
+        tuple val(dataset), path("${dataset}.paf.cmx"), emit: cmx_files
 
     script:
         """
@@ -431,34 +396,6 @@ process corrpower {
 
 
 /**
- * Gather filtered cmx files and send them to all processes that use them.
- */
-Channel.empty()
-    .mix (
-        CMX_FILES_FROM_CORRPOWER
-    )
-    .into {
-        CMX_FILES_FOR_COND_TEST;
-        CMX_FILES_FOR_EXTRACT
-    }
-
-
-
-/**
- * Gather filtered ccm files and send them to all processes that use them.
- */
-Channel.empty()
-    .mix (
-        CCM_FILES_FROM_CORRPOWER
-    )
-    .into {
-        CCM_FILES_FOR_COND_TEST;
-        CCM_FILES_FOR_EXTRACT
-    }
-
-
-
-/**
  * The condtest process performs condition-specific analysis on a
  * correlation matrix.
  */
@@ -467,16 +404,13 @@ process condtest {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_COND_TEST
-        set val(dataset), file(ccm_file) from CCM_FILES_FOR_COND_TEST
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_COND_TEST
-        set val(dataset), file(amx_file) from AMX_FILES_FROM_INPUT
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(ccm_file)
+        tuple val(dataset), path(cmx_file)
+        tuple val(dataset), path(amx_file)
 
     output:
-        set val(dataset), file("${dataset}.paf.csm") into CSM_FILES_FROM_COND_TEST
-
-    when:
-        params.condtest == true
+        tuple val(dataset), path("${dataset}.paf.csm"), emit: csm_files
 
     script:
         """
@@ -514,16 +448,13 @@ process extract {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        set val(dataset), file(emx_file) from EMX_FILES_FOR_EXTRACT
-        set val(dataset), file(ccm_file) from CCM_FILES_FOR_EXTRACT
-        set val(dataset), file(cmx_file) from CMX_FILES_FOR_EXTRACT
-        set val(dataset), file(csm_file) from CSM_FILES_FROM_COND_TEST
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(ccm_file)
+        tuple val(dataset), path(cmx_file)
+        tuple val(dataset), path(csm_file)
 
     output:
-        set val(dataset), file("${dataset}.paf-*.txt") into NET_FILES_FROM_EXTRACT
-
-    when:
-        params.extract == true
+        tuple val(dataset), path("${dataset}.paf-*.txt"), emit: net_files
 
     script:
         """
