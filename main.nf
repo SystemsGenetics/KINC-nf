@@ -54,7 +54,7 @@ cond-test
   alpha:          ${params.condtest_alpha}
   power:          ${params.condtest_power}
 
-extract:
+extract
   enabled:        ${params.extract}
   filter-pvalue:  ${params.extract_filter_pvalue}
   filter-rsquare: ${params.extract_filter_rsquare}
@@ -94,7 +94,7 @@ workflow {
         similarity_chunk(emx_files, indices)
 
         // merge similarity chunks into a list
-        chunks = similarity_chunk.out.chunks.groupTuple()
+        chunks = similarity_chunk.out.chunks.groupTuple(size: params.similarity_chunks)
 
         // match each emx file with corresponding ccm/cmx chunks
         merge_inputs = emx_files.join(chunks)
