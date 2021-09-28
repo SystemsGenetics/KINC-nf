@@ -300,7 +300,7 @@ process similarity_mpi {
         kinc settings set threads ${params.similarity_threads}
         kinc settings set logging off
 
-        mpirun -np ${params.similarity_chunks} \
+        mpirun --allow-run-as-root -np ${params.similarity_chunks} \
         kinc run similarity \
             --input ${emx_file} \
             --ccm ${dataset}.ccm \
@@ -382,8 +382,8 @@ process corrpower {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun -np ${params.corrpower_chunks} \
-            kinc run corrpower \
+        mpirun --allow-run-as-root -np ${params.corrpower_chunks} \
+        kinc run corrpower \
             --ccm-in ${dataset}.ccm \
             --cmx-in ${dataset}.cmx \
             --ccm-out ${dataset}.paf.ccm \
@@ -423,8 +423,8 @@ process condtest {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun -np ${params.condtest_chunks} \
-            kinc run cond-test \
+        mpirun --allow-run-as-root -np ${params.condtest_chunks} \
+        kinc run cond-test \
             --emx ${dataset}.emx \
             --ccm ${dataset}.paf.ccm \
             --cmx ${dataset}.paf.cmx \
