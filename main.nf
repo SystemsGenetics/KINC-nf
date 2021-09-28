@@ -91,16 +91,15 @@ workflow {
     if ( params.similarity == true && params.similarity_chunkrun == true ) {
         // process similarity chunks
         indices = Channel.from( 0 .. params.similarity_chunks-1 )
-        similarity_chunk(emx_files, indices)
+        similarity_chunk(
+            emx_files,
+            indices)
 
-        // merge similarity chunks into a list
+        // merge chunks into output files
         chunks = similarity_chunk.out.chunks.groupTuple(size: params.similarity_chunks)
-
-        // match each emx file with corresponding ccm/cmx chunks
-        merge_inputs = emx_files.join(chunks)
-
-        // merge chunks into ccm/cmx files
-        similarity_merge(merge_inputs)
+        similarity_merge(
+            emx_files,
+            chunks)
 
         ccm_files = ccm_files.mix(similarity_merge.out.ccm_files)
         cmx_files = cmx_files.mix(similarity_merge.out.cmx_files)
@@ -121,10 +120,22 @@ workflow {
 
     // perform correlation power analysis if specified
     if ( params.corrpower == true ) {
-        corrpower(ccm_files, cmx_files)
+        // process corrpower chunks
+        indices = Channel.from( 0 .. params.corrpower_chunks-1 )
+        corrpower_chunk(
+            ccm_files,
+            cmx_files,
+            indices)
 
-        paf_ccm_files = corrpower.out.ccm_files
-        paf_cmx_files = corrpower.out.cmx_files
+        // merge chunks into output files
+        chunks = corrpower_chunk.out.chunks.groupTuple(size: params.corrpower_chunks)
+        corrpower_merge(
+            ccm_files,
+            cmx_files,
+            chunks)
+
+        paf_ccm_files = corrpower_merge.out.ccm_files
+        paf_cmx_files = corrpower_merge.out.cmx_files
     }
     else {
         paf_ccm_files = Channel.empty()
@@ -133,9 +144,28 @@ workflow {
 
     // perform condition testing if specified
     if ( params.condtest == true ) {
-        condtest(emx_files, paf_ccm_files, paf_cmx_files, amx_files)
+        // process condtest chunks
+        indices = Channel.from( 0 .. params.condtest_chunks-1 )
+        condtest_chunk(
+            emx_files,
+            paf_ccm_files,
+            paf_cmx_files,
+            amx_files,
+            indices)
 
-        csm_files = condtest.out.csm_files
+        // merge chunks into output files
+        chunks = condtest_chunk.out.chunks.groupTuple(size: params.condtest_chunks)
+        condtest_merge(
+            emx_files,
+            paf_ccm_files,
+            paf_cmx_files,
+            amx_files,
+            chunks)
+
+        csm_files = condtest_merge.out.csm_files
+    }
+    else {
+        csm_files = Channel.empty()
     }
 
     // extract network files if specified
@@ -234,7 +264,8 @@ process similarity_merge {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(emx_file), path(chunks)
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(chunks)
 
     output:
         tuple val(dataset), path("${dataset}.ccm"), emit: ccm_files
@@ -300,7 +331,7 @@ process similarity_mpi {
         kinc settings set threads ${params.similarity_threads}
         kinc settings set logging off
 
-        mpirun --allow-run-as-root -np ${params.similarity_chunks} \
+        mpirun -np ${params.similarity_chunks} \
         kinc run similarity \
             --input ${emx_file} \
             --ccm ${dataset}.ccm \
@@ -357,24 +388,23 @@ process export_cmx {
 
 
 /**
- * The corrpower process applies power filtering to a correlation matrix.
+ * The corrpower_chunk process performs a single chunk of KINC corrpower.
  */
-process corrpower {
-    tag "${dataset}"
-    publishDir "${params.output_dir}/${dataset}"
+process corrpower_chunk {
+    tag "${dataset}/${index}"
 
     input:
         tuple val(dataset), path(ccm_file)
         tuple val(dataset), path(cmx_file)
+        each index
 
     output:
-        tuple val(dataset), path("${dataset}.paf.ccm"), emit: ccm_files
-        tuple val(dataset), path("${dataset}.paf.cmx"), emit: cmx_files
+        tuple val(dataset), path("*.abd"), emit: chunks
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE np=${params.corrpower_chunks}"
+        echo "#TRACE chunks=${params.corrpower_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
@@ -382,10 +412,9 @@ process corrpower {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun --allow-run-as-root -np ${params.corrpower_chunks} \
-        kinc run corrpower \
-            --ccm-in ${dataset}.ccm \
-            --cmx-in ${dataset}.cmx \
+        kinc chunkrun ${index} ${params.corrpower_chunks} corrpower \
+            --ccm-in ${ccm_file} \
+            --cmx-in ${cmx_file} \
             --ccm-out ${dataset}.paf.ccm \
             --cmx-out ${dataset}.paf.cmx \
             --alpha ${params.corrpower_alpha} \
@@ -396,26 +425,64 @@ process corrpower {
 
 
 /**
- * The condtest process performs condition-specific analysis on a
- * correlation matrix.
+ * The corrpower_merge process takes the output chunks from corrpower
+ * and merges them into the final ccm and cmx files.
  */
-process condtest {
+process corrpower_merge {
     tag "${dataset}"
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(emx_file)
         tuple val(dataset), path(ccm_file)
         tuple val(dataset), path(cmx_file)
-        tuple val(dataset), path(amx_file)
+        tuple val(dataset), path(chunks)
 
     output:
-        tuple val(dataset), path("${dataset}.paf.csm"), emit: csm_files
+        tuple val(dataset), path("${dataset}.paf.ccm"), emit: ccm_files
+        tuple val(dataset), path("${dataset}.paf.cmx"), emit: cmx_files
 
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE np=${params.condtest_chunks}"
+        echo "#TRACE chunks=${params.corrpower_chunks}"
+        echo "#TRACE abd_bytes=`stat -Lc '%s' *.abd | awk '{sum += \$1} END {print sum}'`"
+
+        kinc settings set cuda none
+        kinc settings set opencl none
+        kinc settings set logging off
+
+        kinc merge ${params.corrpower_chunks} corrpower \
+            --ccm-in ${ccm_file} \
+            --cmx-in ${cmx_file} \
+            --ccm-out ${dataset}.paf.ccm \
+            --cmx-out ${dataset}.paf.cmx \
+            --alpha ${params.corrpower_alpha} \
+            --power ${params.corrpower_power}
+        """
+}
+
+
+
+/**
+ * The condtest_chunk process performs a single chunk of KINC condtest.
+ */
+process condtest_chunk {
+    tag "${dataset}/${index}"
+
+    input:
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(paf_ccm_file)
+        tuple val(dataset), path(paf_cmx_file)
+        tuple val(dataset), path(amx_file)
+        each index
+
+    output:
+        tuple val(dataset), path("*.abd"), emit: chunks
+
+    script:
+        """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE chunks=${params.condtest_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
@@ -423,11 +490,53 @@ process condtest {
         kinc settings set opencl none
         kinc settings set logging off
 
-        mpirun --allow-run-as-root -np ${params.condtest_chunks} \
-        kinc run cond-test \
-            --emx ${dataset}.emx \
-            --ccm ${dataset}.paf.ccm \
-            --cmx ${dataset}.paf.cmx \
+        kinc chunkrun ${index} ${params.condtest_chunks} condtest \
+            --emx ${emx_file} \
+            --ccm ${paf_ccm_file} \
+            --cmx ${paf_cmx_file} \
+            --amx ${amx_file} \
+            --output ${dataset}.paf.csm \
+            --feat-tests ${params.condtest_feat_tests} \
+            --feat-types ${params.condtest_feat_types} \
+            --alpha ${params.condtest_alpha} \
+            --power ${params.condtest_power}
+        """
+}
+
+
+
+/**
+ * The condtest_merge process takes the output chunks from condtest
+ * and merges them into the final ccm and cmx files.
+ */
+process condtest_merge {
+    tag "${dataset}"
+    publishDir "${params.output_dir}/${dataset}"
+
+    input:
+        tuple val(dataset), path(emx_file)
+        tuple val(dataset), path(paf_ccm_file)
+        tuple val(dataset), path(paf_cmx_file)
+        tuple val(dataset), path(amx_file)
+        tuple val(dataset), path(chunks)
+
+    output:
+        tuple val(dataset), path("${dataset}.paf.csm"), emit: csm_files
+
+    script:
+        """
+        echo "#TRACE dataset=${dataset}"
+        echo "#TRACE chunks=${params.condtest_chunks}"
+        echo "#TRACE abd_bytes=`stat -Lc '%s' *.abd | awk '{sum += \$1} END {print sum}'`"
+
+        kinc settings set cuda none
+        kinc settings set opencl none
+        kinc settings set logging off
+
+        kinc merge ${params.condtest_chunks} condtest \
+            --emx ${emx_file} \
+            --ccm ${paf_ccm_file} \
+            --cmx ${paf_cmx_file} \
             --amx ${amx_file} \
             --output ${dataset}.paf.csm \
             --feat-tests ${params.condtest_feat_tests} \
