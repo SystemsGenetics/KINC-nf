@@ -91,15 +91,13 @@ workflow {
     if ( params.similarity == true && params.similarity_chunkrun == true ) {
         // process similarity chunks
         indices = Channel.from( 0 .. params.similarity_chunks-1 )
+
         similarity_chunk(emx_files, indices)
 
-        // merge similarity chunks into a list
+        // merge chunks into ccm/cmx files
         chunks = similarity_chunk.out.chunks.groupTuple(size: params.similarity_chunks)
-
-        // match each emx file with corresponding ccm/cmx chunks
         merge_inputs = emx_files.join(chunks)
 
-        // merge chunks into ccm/cmx files
         similarity_merge(merge_inputs)
 
         ccm_files = ccm_files.mix(similarity_merge.out.ccm_files)
@@ -116,15 +114,21 @@ workflow {
 
     // export cmx files if specified
     if ( params.export_cmx == true ) {
-        export_cmx(emx_files, ccm_files, cmx_files)
+        inputs = emx_files
+            .join(ccm_files)
+            .join(cmx_files)
+
+        export_cmx(inputs)
     }
 
     // perform correlation power analysis if specified
     if ( params.corrpower == true ) {
-        corrpower(ccm_files, cmx_files)
+        inputs = ccm_files.join(cmx_files)
 
-        paf_ccm_files = corrpower.out.ccm_files
-        paf_cmx_files = corrpower.out.cmx_files
+        corrpower(inputs)
+
+        paf_ccm_files = corrpower.out.paf_ccm_files
+        paf_cmx_files = corrpower.out.paf_cmx_files
     }
     else {
         paf_ccm_files = Channel.empty()
@@ -133,14 +137,24 @@ workflow {
 
     // perform condition testing if specified
     if ( params.condtest == true ) {
-        condtest(emx_files, paf_ccm_files, paf_cmx_files, amx_files)
+        inputs = emx_files
+            .join(paf_ccm_files)
+            .join(paf_cmx_files)
+            .join(amx_files)
+
+        condtest(inputs)
 
         csm_files = condtest.out.csm_files
     }
 
     // extract network files if specified
     if ( params.extract == true ) {
-        extract(emx_files, paf_ccm_files, paf_cmx_files, csm_files)
+        inputs = emx_files
+            .join(paf_ccm_files)
+            .join(paf_cmx_files)
+            .join(csm_files)
+
+        extract(inputs)
     }
 }
 
@@ -333,9 +347,7 @@ process export_cmx {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(emx_file)
-        tuple val(dataset), path(ccm_file)
-        tuple val(dataset), path(cmx_file)
+        tuple val(dataset), path(emx_file), path(ccm_file), path(cmx_file)
 
     output:
         tuple val(dataset), path("${dataset}.cmx.txt"), emit: cmx_txt_files
@@ -364,12 +376,11 @@ process corrpower {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(ccm_file)
-        tuple val(dataset), path(cmx_file)
+        tuple val(dataset), path(ccm_file), path(cmx_file)
 
     output:
-        tuple val(dataset), path("${dataset}.paf.ccm"), emit: ccm_files
-        tuple val(dataset), path("${dataset}.paf.cmx"), emit: cmx_files
+        tuple val(dataset), path("${dataset}.paf.ccm"), emit: paf_ccm_files
+        tuple val(dataset), path("${dataset}.paf.cmx"), emit: paf_cmx_files
 
     script:
         """
@@ -384,8 +395,8 @@ process corrpower {
 
         mpirun --allow-run-as-root -np ${params.corrpower_chunks} \
         kinc run corrpower \
-            --ccm-in ${dataset}.ccm \
-            --cmx-in ${dataset}.cmx \
+            --ccm-in ${ccm_file} \
+            --cmx-in ${cmx_file} \
             --ccm-out ${dataset}.paf.ccm \
             --cmx-out ${dataset}.paf.cmx \
             --alpha ${params.corrpower_alpha} \
@@ -404,10 +415,7 @@ process condtest {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(emx_file)
-        tuple val(dataset), path(ccm_file)
-        tuple val(dataset), path(cmx_file)
-        tuple val(dataset), path(amx_file)
+        tuple val(dataset), path(emx_file), path(ccm_file), path(cmx_file), path(amx_file)
 
     output:
         tuple val(dataset), path("${dataset}.paf.csm"), emit: csm_files
@@ -425,9 +433,9 @@ process condtest {
 
         mpirun --allow-run-as-root -np ${params.condtest_chunks} \
         kinc run cond-test \
-            --emx ${dataset}.emx \
-            --ccm ${dataset}.paf.ccm \
-            --cmx ${dataset}.paf.cmx \
+            --emx ${emx_file} \
+            --ccm ${ccm_file} \
+            --cmx ${cmx_file} \
             --amx ${amx_file} \
             --output ${dataset}.paf.csm \
             --feat-tests ${params.condtest_feat_tests} \
@@ -448,10 +456,7 @@ process extract {
     publishDir "${params.output_dir}/${dataset}"
 
     input:
-        tuple val(dataset), path(emx_file)
-        tuple val(dataset), path(ccm_file)
-        tuple val(dataset), path(cmx_file)
-        tuple val(dataset), path(csm_file)
+        tuple val(dataset), path(emx_file), path(ccm_file), path(cmx_file), path(csm_file)
 
     output:
         tuple val(dataset), path("${dataset}.paf-*.txt"), emit: net_files
@@ -459,9 +464,8 @@ process extract {
     script:
         """
         echo "#TRACE dataset=${dataset}"
-        echo "#TRACE emx_bytes=`stat -Lc '%s' ${dataset}.emx`"
-        echo "#TRACE ccm_bytes=`stat -Lc '%s' ${dataset}.ccm`"
-        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${dataset}.cmx`"
+        echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
+        echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
 
         kinc settings set cuda none
         kinc settings set opencl none
