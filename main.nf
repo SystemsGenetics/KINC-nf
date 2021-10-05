@@ -176,6 +176,7 @@ process import_emx {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE n_rows=`tail -n +1 ${emx_txt_file} | wc -l`"
         echo "#TRACE n_cols=`head -n +1 ${emx_txt_file} | wc -w`"
@@ -208,6 +209,7 @@ process similarity_chunk {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE hardware_type=${params.similarity_hardware_type}"
         echo "#TRACE chunks=${params.similarity_chunks}"
@@ -256,6 +258,7 @@ process similarity_merge {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE chunks=${params.similarity_chunks}"
         echo "#TRACE abd_bytes=`stat -Lc '%s' *.abd | awk '{sum += \$1} END {print sum}'`"
@@ -304,6 +307,7 @@ process similarity_mpi {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE hardware_type=${params.similarity_hardware_type}"
         echo "#TRACE np=${params.similarity_chunks}"
@@ -384,6 +388,7 @@ process corrpower {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE np=${params.corrpower_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
@@ -422,6 +427,7 @@ process condtest {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE np=${params.condtest_chunks}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
@@ -463,6 +469,7 @@ process extract {
 
     script:
         """
+        echo "#TRACE node_type=\${NODE_TYPE}"
         echo "#TRACE dataset=${dataset}"
         echo "#TRACE ccm_bytes=`stat -Lc '%s' ${ccm_file}`"
         echo "#TRACE cmx_bytes=`stat -Lc '%s' ${cmx_file}`"
