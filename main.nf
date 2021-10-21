@@ -282,6 +282,8 @@ process similarity_merge {
             --bsize ${params.similarity_bsize} \
             --gsize ${params.similarity_gsize} \
             --lsize ${params.similarity_lsize}
+
+        rm -rf *.ccm *.cmx
         """
 }
 
