@@ -251,8 +251,8 @@ process similarity_merge {
         tuple val(dataset), path(emx_file), path(chunks)
 
     output:
-        tuple val(dataset), path("${dataset}.ccm"), emit: ccm_files
-        tuple val(dataset), path("${dataset}.cmx"), emit: cmx_files
+        tuple val(dataset), path("${dataset}.ccm"), emit: ccm_files, optional: true
+        tuple val(dataset), path("${dataset}.cmx"), emit: cmx_files, optional: true
 
     script:
         """
