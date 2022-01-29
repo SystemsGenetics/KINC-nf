@@ -1,5 +1,8 @@
-.ipynb_checkpoints
 .nextflow*
-input
-output
-work
+work/
+data/
+results/
+.DS_Store
+testing/
+testing*
+*.pyc

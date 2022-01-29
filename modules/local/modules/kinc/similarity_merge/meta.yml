@@ -1,0 +1,44 @@
+name: kinc_similarity_merge
+description: Merges results from a chunked pairwise correlation of the data matrix.
+
+keywords:
+  - coexpression
+  - networks
+  - correlation
+tools:
+  - interproscan:
+    description: The Knowledge Independent Network Construction (KINC) software is an application for constructing Gene Co-expression Networks (GCN) from gene expression data.
+    homepage: https://kinc.readthedocs.io/en/latest/
+    documentation: https://kinc.readthedocs.io/en/latest/
+    tool_dev_url: https://github.com/SystemsGenetics/KINC
+    doi: "doi.org/10.1093/bib/bbab495"
+    licence: ['MIT']
+
+input:
+  - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+  - abd:
+        type: files
+        description: Gene Expression Matrix in binary format.
+        pattern: "*.{emx}"
+
+
+output:
+  - cmx:
+        type: file
+        description: The correlation matrix file.
+        pattern: "*.{cmx}"
+  - ccm:
+        type: file
+        description: The cluster composition matrix file.
+        pattern: "*.{ccm}"
+  - version:
+        type: file
+        description: File containing software versions
+        pattern: "version.txt"
+
+authors:
+  - "@spficklin", "@bentsherman"
