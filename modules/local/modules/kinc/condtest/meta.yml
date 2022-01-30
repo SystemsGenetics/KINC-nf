@@ -1,5 +1,5 @@
-name: kinc_importemx
-description: Imports a gene expression matrix into the binary format used by KINC.
+name: kinc_condtest
+description: Performs conditional testing of each pairwise cluster.
 
 keywords:
   - coexpression
@@ -20,17 +20,29 @@ input:
         description: |
           Groovy Map containing sample information
           e.g. [ id:'test', single_end:false ]
-  - data:
-        type: file
-        description: The data matrix in tab-delimeted format.
-        pattern: "*.{txt,tsv}"
-
+  - emx:
+        type: files
+        description: Gene Expression Matrix in binary format.
+        pattern: "*.{emx}"
+  - ccm:
+        type: files
+        description: Cluster composition matrix.
+        pattern: "*.{ccm}"
+  - cmx:
+        type: files
+        description: Correlation matrix.
+        pattern: "*.{cmx}"
+  - smeta:
+        type: files
+        description: Sample meta data file.
+        pattern: "*.{tst,tsv}"
 
 output:
-  - emx:
+  - csm:
         type: file
-        description: A gene expression matrix in binary format.
-        pattern: "*.{emx}"
+        description: The condition specific matrix file.
+        pattern: "*.{csm}"
+
   - version:
         type: file
         description: File containing software versions

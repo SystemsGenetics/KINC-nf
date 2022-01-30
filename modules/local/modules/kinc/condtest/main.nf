@@ -1,17 +1,19 @@
 def VERSION = '3.4.2'
 
-process KINC_SIMILARITY_MERGE {
+process KINC_CONDTEST {
     tag "${meta.id}"
 
     container "systemsgenetics/kinc:$VERSION-cpu"
 
     input:
-    tuple val(meta), path(emx), path(chunk_files)
+    tuple val(meta), path(emx)
+    tuple val(meta), path(ccm)
+    tuple val(meta), path(cmx)
+    path(smeta)
     val(num_chunks)
 
     output:
-    tuple val(meta), path("*.ccm"), emit: ccm
-    tuple val(meta), path("*.cmx"), emit: cmx
+    tuple val(meta), path("*.csm"), emit: csm
     path "*.version.txt", emit: version
 
     script:
@@ -24,11 +26,14 @@ process KINC_SIMILARITY_MERGE {
     kinc settings set threads 1
     kinc settings set logging off
 
-    kinc merge ${num_chunks} similarity \
-          --input ${emx} \
-          --ccm ${prefix}.ccm \
-          --cmx ${prefix}.cmx \
-          ${args}
+    mpirun --allow-run-as-root -np  ${num_chunks} \
+      kinc run cond-test \
+        --emx ${emx} \
+        --ccm ${ccm} \
+        --cmx ${cmx} \
+        --amx ${smeta} \
+        --output ${prefix}.csm \
+        ${args}
 
     echo $VERSION >KINC.version.txt
     """

@@ -1,17 +1,18 @@
 def VERSION = '3.4.2'
 
-process KINC_SIMILARITY_MERGE {
+process KINC_EXTRACT {
     tag "${meta.id}"
 
     container "systemsgenetics/kinc:$VERSION-cpu"
 
     input:
-    tuple val(meta), path(emx), path(chunk_files)
-    val(num_chunks)
+    tuple val(meta), path(emx)
+    tuple val(meta), path(ccm)
+    tuple val(meta), path(cmx)
+    tuple val(meta), path(csm)
 
     output:
-    tuple val(meta), path("*.ccm"), emit: ccm
-    tuple val(meta), path("*.cmx"), emit: cmx
+    tuple val(meta), path("*.net.tsv"), emit: net
     path "*.version.txt", emit: version
 
     script:
@@ -24,11 +25,13 @@ process KINC_SIMILARITY_MERGE {
     kinc settings set threads 1
     kinc settings set logging off
 
-    kinc merge ${num_chunks} similarity \
-          --input ${emx} \
-          --ccm ${prefix}.ccm \
-          --cmx ${prefix}.cmx \
-          ${args}
+    kinc run extract \
+        --emx ${emx} \
+        --cmx ${cmx} \
+        --ccm ${ccm} \
+        --csm ${csm} \
+        --output ${prefix}.net.tsv \
+        ${args}
 
     echo $VERSION >KINC.version.txt
     """

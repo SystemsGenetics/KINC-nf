@@ -1,5 +1,5 @@
-name: kinc_importemx
-description: Imports a gene expression matrix into the binary format used by KINC.
+name: kinc_removebias
+description: Removes biased edges from a network file.
 
 keywords:
   - coexpression
@@ -20,17 +20,21 @@ input:
         description: |
           Groovy Map containing sample information
           e.g. [ id:'test', single_end:false ]
+  - net:
+        type: file
+        description: A tab-delimeted network file.
+        pattern: "*.{tsv}"
+
+
+output:
   - data:
         type: file
         description: The data matrix in tab-delimeted format.
         pattern: "*.{txt,tsv}"
-
-
-output:
-  - emx:
+  - net:
         type: file
-        description: A gene expression matrix in binary format.
-        pattern: "*.{emx}"
+        description: A tab-delimeted network file with biased edges removed.
+        pattern: "*.{tsv}"
   - version:
         type: file
         description: File containing software versions

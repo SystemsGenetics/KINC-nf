@@ -1,5 +1,5 @@
-name: kinc_importemx
-description: Imports a gene expression matrix into the binary format used by KINC.
+name: kinc_extract
+description: Extracts to a text file a network from KINC binary files.
 
 keywords:
   - coexpression
@@ -20,17 +20,28 @@ input:
         description: |
           Groovy Map containing sample information
           e.g. [ id:'test', single_end:false ]
-  - data:
+  - emx:
+        type: files
+        description: Gene Expression Matrix in binary format.
+        pattern: "*.{emx}"
+  - ccm:
+        type: files
+        description: Cluster composition matrix.
+        pattern: "*.{ccm}"
+  - cmx:
+        type: files
+        description: Correlation matrix.
+        pattern: "*.{cmx}"
+  - csm:
         type: file
-        description: The data matrix in tab-delimeted format.
-        pattern: "*.{txt,tsv}"
-
+        description: The condition specific matrix file.
+        pattern: "*.{csm}"
 
 output:
-  - emx:
+  - net:
         type: file
-        description: A gene expression matrix in binary format.
-        pattern: "*.{emx}"
+        description: A tab-delimeted network file.
+        pattern: "*.{tsv}"
   - version:
         type: file
         description: File containing software versions

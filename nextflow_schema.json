@@ -5,8 +5,133 @@
     "description": "Knowledge Independent Network Construction",
     "type": "object",
     "definitions": {
-        "data_matrix_import_options": {
-            "title": "Data matrix import options",
+        "remove_biased_edges_options": {
+            "title": "remove-biased-edges options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "removebias_wath": {
+                    "type": "number",
+                    "default": 0.0001,
+                    "description": "The p-value threshold for performing the Welch Anova test. This test checks for differential expression of the GMM cluster vs non-cluster for each gene, thus, two tests are performed: one for each gene in the edge.  Edges with both tests having P-values below this value are kept. The default is 1e-3."
+                },
+                "removebias_wabase": {
+                    "type": "string",
+                    "description": "If the dataset consists of multiple categorical conditions (e.g. multiple treatments) then you can improve the identification of biased edges by providing the name of the categorical condition that represents the base or control condition. If this option is used then only the control samples will be used for testing the Welch Anova test. You must specify the column in the annotation matrix (specified with the --amx option), a comma, then the category representing the control. For example if the column header is \"Treatment\" and the category is \"Control\", you would specify a value of \"Treatment,Control\" for this argument. Be sure to provide proper capitalization and no spaces after the comma."
+                },
+                "removebias_mtth": {
+                    "type": "number",
+                    "default": 0.1,
+                    "description": "The p-value threshold for performing the paired T-test for missingness. This test checks for signicant difference in missingness between the two genes of an edge. This is important because one gene with a high level of missginess will bias the relationship if that missigness is condition-specific. Only edges whose genes have the same pattern of missingness should be considered.  Those with p-values greater than the threshold are considered non-different. The default is 0.1."
+                },
+                "removebias_split_size": {
+                    "type": "integer",
+                    "default": 1000000,
+                    "description": "When processing large networks, the file is divided into chunks to  prevent  overunning of local memory.  Raise or lower the size of the chunk to use or reduce memory usage.",
+                    "hidden": true
+                }
+            }
+        },
+        "extract_options": {
+            "title": "extract options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "extract_format": {
+                    "type": "string",
+                    "default": "tidy",
+                    "description": "Format to use for the output file.",
+                    "enum": [
+                        "text",
+                        "tidy",
+                        "minimal",
+                        "graphml"
+                    ]
+                },
+                "extract_mincorr": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Minimum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_maxcorr": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "Maximum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_pvalue": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to categorical, quantitative and ordinal tests. This filters the network such that only edges (clusters) with p-values below (or above) the given values are kept. To filter all conditions, provide a single p-value threshold. Additionally, you can specify different p-values for different conditions. For example, suppose you were tesing a categorical condition named 'Subspecies' with a label of 'Japonica' and you wanted edges with an p-value < 1e-3, you would input \"Subspecies,Japonica,1e-3\". You can specify to filter edges with a p-value greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Subspecies,Japonica,lt,1e-3\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"lt,1e-3\"."
+                },
+                "extract_rsquare": {
+                    "type": "number",
+                    "default": 0.3,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to quantitative and ordinal tests. This filters the network such that only edges (clusters) with r-squared values derived from linear regression testing that are above (or below) the given values are kept. To filter all conditions, provide a single r-squared value. By default any r-squared value above the value will be kept. Additionally, you can specify different r-squared values for different conditions. For example, suppose you were tesing a quantiative condition named 'Weight' and you wanted edges with an r-squared value > 0.5, you would input \"Weight,0.5\". You can specify to filter edges greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Weight,gt,0.5\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"gt,0.3\"."
+                }
+            }
+        },
+        "cond_test_options": {
+            "title": "cond-test options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "condtest_delim": {
+                    "type": "string",
+                    "default": "tab",
+                    "description": "Delimiter used to seperate values in the Annotation matrix, usually a tab or comma",
+                    "enum": [
+                        "tab",
+                        "comma"
+                    ]
+                },
+                "condtest_nan": {
+                    "type": "string",
+                    "default": "NA",
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
+                },
+                "condtest_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the regression power test. This argument only applies to quantitative variables."
+                },
+                "condtest_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the regression power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8. . This argument only applies to quantitative variables"
+                },
+                "condtest_tests": {
+                    "type": "string",
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
+                },
+                "condtest_types": {
+                    "type": "string",
+                    "description": "A comma-separated list of features, with no spaces around commas, from column names of the annotation matrix that should be tested. For example, if the annotation matrix has columns 'Treatment' and 'Subspecies' you can enter: \"Treatment,Subspecies\" Note: column names are case-sensitive."
+                }
+            }
+        },
+        "corrpower_options": {
+            "title": "corrpower options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "corrpower_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the power test."
+                },
+                "corrpower_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8."
+                }
+            }
+        },
+        "import_emx_options": {
+            "title": "import-emx options",
             "type": "object",
             "description": "",
             "default": "",
@@ -29,7 +154,7 @@
             }
         },
         "similarity_options": {
-            "title": "Similarity options",
+            "title": "similarity options",
             "type": "object",
             "description": "",
             "default": "",
@@ -54,7 +179,7 @@
                 },
                 "similarity_minexpr": {
                     "type": "number",
-                    "description": "Minimum threshold for a sample to be included in a gene pair.",
+                    "description": "Minimum threshold for a sample to be included in a gene pair."
                 },
                 "similarity_minsamp": {
                     "type": "integer",
@@ -127,20 +252,32 @@
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
             "properties": {
+                "net_type": {
+                    "type": "string",
+                    "default": "cs",
+                    "description": "The type of network to construct. Set to 'cs\" for a context-specific or 'trad' for traditional",
+                    "enum": [
+                        "cs",
+                        "trad"
+                    ]
+                },
                 "data": {
                     "type": "string",
                     "default": "None",
-                    "fa_icon": "fab fa-buromobelexperte"
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The input data matrix. This file must be in a tab delimited format with the first row containing the header of sample names (and one less column then all other rows).  For all other rows, the first column should be the element (e.g. gene) name and all other values should be the abundance/count values."
                 },
                 "smeta": {
                     "type": "string",
                     "default": "None",
-                    "fa_icon": "fab fa-buromobelexperte"
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The sample metadata file.  This is a tab delimited file  where the first row contains the sample names. The sample names must be identical to the names in the data matrix header.  All other columns contain variables specific to the samples."
                 },
                 "outprefix": {
                     "type": "string",
                     "default": "kinc_out",
-                    "fa_icon": "fas fa-align-justify"
+                    "fa_icon": "fas fa-align-justify",
+                    "description": "The prefix used for all output files created by the workflow."
                 },
                 "outdir": {
                     "type": "string",
@@ -157,40 +294,11 @@
                 }
             },
             "required": [
+                "net_type",
                 "data",
                 "smeta",
                 "outprefix"
             ]
-        },
-        "reference_genome_options": {
-            "title": "Reference genome options",
-            "type": "object",
-            "fa_icon": "fas fa-dna",
-            "description": "Reference genome related files and options required for the workflow.",
-            "properties": {
-                "genome": {
-                    "type": "string",
-                    "description": "Name of iGenomes reference.",
-                    "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details.",
-                    "hidden": true
-                },
-                "igenomes_base": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Directory / URL base for iGenomes references.",
-                    "default": "s3://ngi-igenomes/igenomes",
-                    "fa_icon": "fas fa-cloud-download-alt",
-                    "hidden": true
-                },
-                "igenomes_ignore": {
-                    "type": "boolean",
-                    "description": "Do not load the iGenomes reference config.",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
-                }
-            }
         },
         "institutional_config_options": {
             "title": "Institutional config options",
@@ -355,16 +463,25 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/data_matrix_import_options"
+            "$ref": "#/definitions/remove_biased_edges_options"
+        },
+        {
+            "$ref": "#/definitions/extract_options"
+        },
+        {
+            "$ref": "#/definitions/cond_test_options"
+        },
+        {
+            "$ref": "#/definitions/corrpower_options"
+        },
+        {
+            "$ref": "#/definitions/import_emx_options"
         },
         {
             "$ref": "#/definitions/similarity_options"
         },
         {
             "$ref": "#/definitions/input_output_options"
-        },
-        {
-            "$ref": "#/definitions/reference_genome_options"
         },
         {
             "$ref": "#/definitions/institutional_config_options"

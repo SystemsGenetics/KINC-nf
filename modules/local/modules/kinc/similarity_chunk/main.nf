@@ -29,7 +29,7 @@ process KINC_SIMILARITY_CHUNK {
           --input ${emx} \
           --ccm ${prefix}.ccm \
           --cmx ${prefix}.cmx \
-          $args
+          ${args}
 
     echo $VERSION >KINC.version.txt
     """

@@ -1,12 +1,13 @@
 def VERSION = '3.4.2'
 
-process KINC_SIMILARITY_MERGE {
+process KINC_CORRPOWER {
     tag "${meta.id}"
 
     container "systemsgenetics/kinc:$VERSION-cpu"
 
     input:
-    tuple val(meta), path(emx), path(chunk_files)
+    tuple val(meta), path(ccm)
+    tuple val(meta), path(cmx)
     val(num_chunks)
 
     output:
@@ -24,11 +25,13 @@ process KINC_SIMILARITY_MERGE {
     kinc settings set threads 1
     kinc settings set logging off
 
-    kinc merge ${num_chunks} similarity \
-          --input ${emx} \
-          --ccm ${prefix}.ccm \
-          --cmx ${prefix}.cmx \
-          ${args}
+    mpirun --allow-run-as-root -np  ${num_chunks} \
+      kinc run corrpower \
+        --ccm-in ${ccm} \
+        --cmx-in ${cmx} \
+        --ccm-out ${prefix}.cp.ccm \
+        --cmx-out ${prefix}.cp.cmx \
+        ${args}
 
     echo $VERSION >KINC.version.txt
     """

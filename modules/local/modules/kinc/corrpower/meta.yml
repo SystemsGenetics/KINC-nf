@@ -1,5 +1,5 @@
-name: kinc_importemx
-description: Imports a gene expression matrix into the binary format used by KINC.
+name: kinc_corrpower
+description: Performs power analysis on each correlation and removes underpowered results.
 
 keywords:
   - coexpression
@@ -20,17 +20,25 @@ input:
         description: |
           Groovy Map containing sample information
           e.g. [ id:'test', single_end:false ]
-  - data:
+  - cmx:
         type: file
-        description: The data matrix in tab-delimeted format.
-        pattern: "*.{txt,tsv}"
+        description: The correlation matrix file.
+        pattern: "*.{cmx}"
+  - ccm:
+        type: file
+        description: The cluster composition matrix file.
+        pattern: "*.{ccm}"
 
 
 output:
-  - emx:
+  - cmx:
         type: file
-        description: A gene expression matrix in binary format.
-        pattern: "*.{emx}"
+        description: A correlation matrix file with low powered edges removed.
+        pattern: "*.{cmx}"
+  - ccm:
+        type: file
+        description: A cluster composition matrix file with low powered edges removed.
+        pattern: "*.{ccm}"
   - version:
         type: file
         description: File containing software versions
