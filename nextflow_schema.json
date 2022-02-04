@@ -5,133 +5,65 @@
     "description": "Knowledge Independent Network Construction",
     "type": "object",
     "definitions": {
-        "remove_biased_edges_options": {
-            "title": "remove-biased-edges options",
+        "input_output_options": {
+            "title": "Input/output options",
             "type": "object",
-            "description": "",
-            "default": "",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
             "properties": {
-                "removebias_wath": {
-                    "type": "number",
-                    "default": 0.0001,
-                    "description": "The p-value threshold for performing the Welch Anova test. This test checks for differential expression of the GMM cluster vs non-cluster for each gene, thus, two tests are performed: one for each gene in the edge.  Edges with both tests having P-values below this value are kept. The default is 1e-3."
-                },
-                "removebias_wabase": {
+                "net_type": {
                     "type": "string",
-                    "description": "If the dataset consists of multiple categorical conditions (e.g. multiple treatments) then you can improve the identification of biased edges by providing the name of the categorical condition that represents the base or control condition. If this option is used then only the control samples will be used for testing the Welch Anova test. You must specify the column in the annotation matrix (specified with the --amx option), a comma, then the category representing the control. For example if the column header is \"Treatment\" and the category is \"Control\", you would specify a value of \"Treatment,Control\" for this argument. Be sure to provide proper capitalization and no spaces after the comma."
-                },
-                "removebias_mtth": {
-                    "type": "number",
-                    "default": 0.1,
-                    "description": "The p-value threshold for performing the paired T-test for missingness. This test checks for signicant difference in missingness between the two genes of an edge. This is important because one gene with a high level of missginess will bias the relationship if that missigness is condition-specific. Only edges whose genes have the same pattern of missingness should be considered.  Those with p-values greater than the threshold are considered non-different. The default is 0.1."
-                },
-                "removebias_split_size": {
-                    "type": "integer",
-                    "default": 1000000,
-                    "description": "When processing large networks, the file is divided into chunks to  prevent  overunning of local memory.  Raise or lower the size of the chunk to use or reduce memory usage.",
-                    "hidden": true
-                }
-            }
-        },
-        "extract_options": {
-            "title": "extract options",
-            "type": "object",
-            "description": "",
-            "default": "",
-            "properties": {
-                "extract_format": {
-                    "type": "string",
-                    "default": "tidy",
-                    "description": "Format to use for the output file.",
+                    "default": "cs",
+                    "description": "The type of network to construct. Set to 'cs\" for a context-specific or 'trad' for traditional",
                     "enum": [
-                        "text",
-                        "tidy",
-                        "minimal",
-                        "graphml"
+                        "cs",
+                        "trad"
                     ]
                 },
-                "extract_mincorr": {
-                    "type": "number",
-                    "default": 0,
-                    "description": "Minimum (absolute) correlation threshold for gene pairs."
+                "data": {
+                    "type": "string",
+                    "default": "None",
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The input data matrix. This file must be in a tab delimited format with the first row containing the header of sample names (and one less column then all other rows).  For all other rows, the first column should be the element (e.g. gene) name and all other values should be the abundance/count values."
                 },
-                "extract_maxcorr": {
-                    "type": "number",
-                    "default": 1,
-                    "description": "Maximum (absolute) correlation threshold for gene pairs."
+                "smeta": {
+                    "type": "string",
+                    "default": "None",
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The sample metadata file.  This is a tab delimited file  where the first row contains the sample names. The sample names must be identical to the names in the data matrix header.  All other columns contain variables specific to the samples."
                 },
-                "extract_pvalue": {
-                    "type": "number",
-                    "default": 0.001,
-                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to categorical, quantitative and ordinal tests. This filters the network such that only edges (clusters) with p-values below (or above) the given values are kept. To filter all conditions, provide a single p-value threshold. Additionally, you can specify different p-values for different conditions. For example, suppose you were tesing a categorical condition named 'Subspecies' with a label of 'Japonica' and you wanted edges with an p-value < 1e-3, you would input \"Subspecies,Japonica,1e-3\". You can specify to filter edges with a p-value greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Subspecies,Japonica,lt,1e-3\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"lt,1e-3\"."
+                "outdir": {
+                    "type": "string",
+                    "description": "Path to the output directory where the results will be saved.",
+                    "default": "./results",
+                    "fa_icon": "fas fa-folder-open"
                 },
-                "extract_rsquare": {
-                    "type": "number",
-                    "default": 0.3,
-                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to quantitative and ordinal tests. This filters the network such that only edges (clusters) with r-squared values derived from linear regression testing that are above (or below) the given values are kept. To filter all conditions, provide a single r-squared value. By default any r-squared value above the value will be kept. Additionally, you can specify different r-squared values for different conditions. For example, suppose you were tesing a quantiative condition named 'Weight' and you wanted edges with an r-squared value > 0.5, you would input \"Weight,0.5\". You can specify to filter edges greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Weight,gt,0.5\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"gt,0.3\"."
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary.",
+                    "fa_icon": "fas fa-envelope",
+                    "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                },
+                "graph_name": {
+                    "type": "string",
+                    "default": "KINC csGCN",
+                    "description": "A human readable name for the network created by this workflow.  This name will be used in the final GraphML output file."
+                },
+                "graph_id": {
+                    "type": "string",
+                    "description": "A computer readable name for the network created by this workflow.  This name will be used in the final GraphML output file.  Avoid using spaces or other special characters in this name."
                 }
-            }
+            },
+            "required": [
+                "net_type",
+                "data",
+                "smeta",
+                "graph_name"
+            ]
         },
-        "cond_test_options": {
-            "title": "cond-test options",
-            "type": "object",
-            "description": "",
-            "default": "",
-            "properties": {
-                "condtest_delim": {
-                    "type": "string",
-                    "default": "tab",
-                    "description": "Delimiter used to seperate values in the Annotation matrix, usually a tab or comma",
-                    "enum": [
-                        "tab",
-                        "comma"
-                    ]
-                },
-                "condtest_nan": {
-                    "type": "string",
-                    "default": "NA",
-                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
-                },
-                "condtest_alpha": {
-                    "type": "number",
-                    "default": 0.001,
-                    "description": "The significance level (i.e. Type I error rate, alpha) for the regression power test. This argument only applies to quantitative variables."
-                },
-                "condtest_power": {
-                    "type": "number",
-                    "default": 0.8,
-                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the regression power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8. . This argument only applies to quantitative variables"
-                },
-                "condtest_tests": {
-                    "type": "string",
-                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
-                },
-                "condtest_types": {
-                    "type": "string",
-                    "description": "A comma-separated list of features, with no spaces around commas, from column names of the annotation matrix that should be tested. For example, if the annotation matrix has columns 'Treatment' and 'Subspecies' you can enter: \"Treatment,Subspecies\" Note: column names are case-sensitive."
-                }
-            }
-        },
-        "corrpower_options": {
-            "title": "corrpower options",
-            "type": "object",
-            "description": "",
-            "default": "",
-            "properties": {
-                "corrpower_alpha": {
-                    "type": "number",
-                    "default": 0.001,
-                    "description": "The significance level (i.e. Type I error rate, alpha) for the power test."
-                },
-                "corrpower_power": {
-                    "type": "number",
-                    "default": 0.8,
-                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8."
-                }
-            }
-        },
-        "import_emx_options": {
-            "title": "import-emx options",
+        "kinc_run_import_emx_options": {
+            "title": "kinc run import-emx options",
             "type": "object",
             "description": "",
             "default": "",
@@ -153,12 +85,18 @@
                 }
             }
         },
-        "similarity_options": {
-            "title": "similarity options",
+        "kinc_run_similarity_options": {
+            "title": "kinc run similarity options",
             "type": "object",
             "description": "",
             "default": "",
             "properties": {
+                "similarity_chunks": {
+                    "type": "integer",
+                    "fa_icon": "fas fa-border-none",
+                    "description": "The number of chunks into which all calculations should be divided. To maximize performance set this to the at least the same as the queueSize argument.",
+                    "default": 4
+                },
                 "similarity_clusmethod": {
                     "type": "string",
                     "default": "gmm",
@@ -246,59 +184,154 @@
                 }
             }
         },
-        "input_output_options": {
-            "title": "Input/output options",
+        "kinc_run_corrpower_options": {
+            "title": "kinc run corrpower options",
             "type": "object",
-            "fa_icon": "fas fa-terminal",
-            "description": "Define where the pipeline should find input data and save output data.",
+            "description": "",
+            "default": "",
             "properties": {
-                "net_type": {
+                "corrpower_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the power test."
+                },
+                "corrpower_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8."
+                }
+            }
+        },
+        "kinc_run_cond_test_options": {
+            "title": "kinc run cond-test options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "condtest_delim": {
                     "type": "string",
-                    "default": "cs",
-                    "description": "The type of network to construct. Set to 'cs\" for a context-specific or 'trad' for traditional",
+                    "default": "tab",
+                    "description": "Delimiter used to seperate values in the Annotation matrix, usually a tab or comma",
                     "enum": [
-                        "cs",
-                        "trad"
+                        "tab",
+                        "comma"
                     ]
                 },
-                "data": {
+                "condtest_nan": {
                     "type": "string",
-                    "default": "None",
-                    "fa_icon": "fab fa-buromobelexperte",
-                    "description": "The input data matrix. This file must be in a tab delimited format with the first row containing the header of sample names (and one less column then all other rows).  For all other rows, the first column should be the element (e.g. gene) name and all other values should be the abundance/count values."
+                    "default": "NA",
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
                 },
-                "smeta": {
-                    "type": "string",
-                    "default": "None",
-                    "fa_icon": "fab fa-buromobelexperte",
-                    "description": "The sample metadata file.  This is a tab delimited file  where the first row contains the sample names. The sample names must be identical to the names in the data matrix header.  All other columns contain variables specific to the samples."
+                "condtest_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the regression power test. This argument only applies to quantitative variables."
                 },
-                "outprefix": {
-                    "type": "string",
-                    "default": "kinc_out",
-                    "fa_icon": "fas fa-align-justify",
-                    "description": "The prefix used for all output files created by the workflow."
+                "condtest_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the regression power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8. . This argument only applies to quantitative variables"
                 },
-                "outdir": {
+                "condtest_tests": {
                     "type": "string",
-                    "description": "Path to the output directory where the results will be saved.",
-                    "default": "./results",
-                    "fa_icon": "fas fa-folder-open"
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
                 },
-                "email": {
+                "condtest_types": {
                     "type": "string",
-                    "description": "Email address for completion summary.",
-                    "fa_icon": "fas fa-envelope",
-                    "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
-                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                    "description": "A comma-separated list of features, with no spaces around commas, from column names of the annotation matrix that should be tested. For example, if the annotation matrix has columns 'Treatment' and 'Subspecies' you can enter: \"Treatment,Subspecies\" Note: column names are case-sensitive."
                 }
-            },
-            "required": [
-                "net_type",
-                "data",
-                "smeta",
-                "outprefix"
-            ]
+            }
+        },
+        "kinc_run_extract_options": {
+            "title": "kinc run extract options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "extract_format": {
+                    "type": "string",
+                    "default": "tidy",
+                    "description": "Format to use for the output file.",
+                    "enum": [
+                        "text",
+                        "tidy",
+                        "minimal",
+                        "graphml"
+                    ]
+                },
+                "extract_mincorr": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Minimum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_maxcorr": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "Maximum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_pvalue": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to categorical, quantitative and ordinal tests. This filters the network such that only edges (clusters) with p-values below (or above) the given values are kept. To filter all conditions, provide a single p-value threshold. Additionally, you can specify different p-values for different conditions. For example, suppose you were tesing a categorical condition named 'Subspecies' with a label of 'Japonica' and you wanted edges with an p-value < 1e-3, you would input \"Subspecies,Japonica,1e-3\". You can specify to filter edges with a p-value greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Subspecies,Japonica,lt,1e-3\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"lt,1e-3\"."
+                },
+                "extract_rsquare": {
+                    "type": "number",
+                    "default": 0.3,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to quantitative and ordinal tests. This filters the network such that only edges (clusters) with r-squared values derived from linear regression testing that are above (or below) the given values are kept. To filter all conditions, provide a single r-squared value. By default any r-squared value above the value will be kept. Additionally, you can specify different r-squared values for different conditions. For example, suppose you were tesing a quantiative condition named 'Weight' and you wanted edges with an r-squared value > 0.5, you would input \"Weight,0.5\". You can specify to filter edges greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Weight,gt,0.5\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"gt,0.3\"."
+                }
+            }
+        },
+        "kinc_filter_bias_r_options": {
+            "title": "kinc-filter-bias.R options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "filterbias_wa_th": {
+                    "type": "number",
+                    "default": 0.0001,
+                    "description": "The p-value threshold for performing the Welch Anova test. This test checks for differential expression of the GMM cluster vs non-cluster for each gene, thus, two tests are performed: one for each gene in the edge.  Edges with both tests having P-values below this value are kept. The default is 1e-3."
+                },
+                "filterbias_wa_base": {
+                    "type": "string",
+                    "description": "If the dataset consists of multiple categorical conditions (e.g. multiple treatments) then you can improve the identification of biased edges by providing the name of the categorical condition that represents the base or control condition. If this option is used then only the control samples will be used for testing the Welch Anova test. You must specify the column in the annotation matrix (specified with the --amx option), a comma, then the category representing the control. For example if the column header is \"Treatment\" and the category is \"Control\", you would specify a value of \"Treatment,Control\" for this argument. Be sure to provide proper capitalization and no spaces after the comma."
+                },
+                "filterbias_mtt_th": {
+                    "type": "number",
+                    "default": 0.1,
+                    "description": "The p-value threshold for performing the paired T-test for missingness. This test checks for signicant difference in missingness between the two genes of an edge. This is important because one gene with a high level of missginess will bias the relationship if that missigness is condition-specific. Only edges whose genes have the same pattern of missingness should be considered.  Those with p-values greater than the threshold are considered non-different. The default is 0.1."
+                },
+                "filterbias_split_size": {
+                    "type": "integer",
+                    "default": 1000000,
+                    "description": "When processing large networks, the file is divided into chunks to  prevent  overunning of local memory.  Raise or lower the size of the chunk to use or reduce memory usage.",
+                    "hidden": true
+                }
+            }
+        },
+        "kinc_filter_rank_r_options": {
+            "title": "kinc-filter-rank.R options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "filterrank_score_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the Similarity Score ranking."
+                },
+                "filterrank_pval_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the p-value ranking."
+                },
+                "filterrank_rsqr_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the R-squared ranking."
+                },
+                "filterrank_top_n": {
+                    "type": "integer",
+                    "description": "Extract the top n ranked edges from the network file. This is the top n ranked edges per condition. If --no_conditions is provided then this is the top n ranked edges in the full network. Note: some edges may have the same rank, but only the first top_n will be returned"
+                }
+            }
         },
         "institutional_config_options": {
             "title": "Institutional config options",
@@ -363,6 +396,14 @@
                     "hidden": true,
                     "help_text": "Use to set an upper-limit for the CPU requirement for each process. Should be an integer e.g. `--max_cpus 1`"
                 },
+                "max_gpus": {
+                    "type": "integer",
+                    "description": "Maximum number of GPUs that can be requested for any single job.",
+                    "default": 0,
+                    "fa_icon": "fas fa-microchip",
+                    "hidden": true,
+                    "help_text": "Use to set an upper-limit for the GPU requirement for each process. Should be an integer e.g. `--max_gpus 1`"
+                },
                 "max_memory": {
                     "type": "string",
                     "description": "Maximum amount of memory that can be requested for any single job.",
@@ -380,21 +421,6 @@
                     "pattern": "^(\\d+\\.?\\s*(s|m|h|day)\\s*)+$",
                     "hidden": true,
                     "help_text": "Use to set an upper-limit for the time requirement for each process. Should be a string in the format integer-unit e.g. `--max_time '2.h'`"
-                },
-                "chunks": {
-                    "type": "integer",
-                    "fa_icon": "fas fa-border-none",
-                    "description": "The number of chunks into which all calculations should be divided. To maximize performance set this to the at least the same as the queueSize argument.",
-                    "default": 4
-                },
-                "hardware": {
-                    "type": "string",
-                    "description": "If the profile on which this workflow executes uses GPUs then set this to 'gpu' otherwise it defaults to 'cpu'.",
-                    "default": "cpu",
-                    "enum": [
-                        "cpu",
-                        "gpu"
-                    ]
                 }
             }
         },
@@ -463,31 +489,34 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/remove_biased_edges_options"
-        },
-        {
-            "$ref": "#/definitions/extract_options"
-        },
-        {
-            "$ref": "#/definitions/cond_test_options"
-        },
-        {
-            "$ref": "#/definitions/corrpower_options"
-        },
-        {
-            "$ref": "#/definitions/import_emx_options"
-        },
-        {
-            "$ref": "#/definitions/similarity_options"
-        },
-        {
             "$ref": "#/definitions/input_output_options"
         },
         {
-            "$ref": "#/definitions/institutional_config_options"
+            "$ref": "#/definitions/execution_options"
         },
         {
-            "$ref": "#/definitions/execution_options"
+            "$ref": "#/definitions/kinc_run_import_emx_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_similarity_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_corrpower_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_cond_test_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_extract_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_filter_bias_r_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_filter_rank_r_options"
+        },
+        {
+            "$ref": "#/definitions/institutional_config_options"
         },
         {
             "$ref": "#/definitions/generic_options"

@@ -17,13 +17,15 @@ class WorkflowKinc {
             log.error "Please provide a tab-delimeted sample metadata matrix to the pipeline e.g. '--smeta sample_metadata.tsv'"
             System.exit(1)
         }
-        if (!params.outprefix) {
-            log.error "Please provide the prefix for all output files e.g. '--outprefix kinc_test'"
+        if (params.similarity_chunks < 2 ) {
+            log.error "The number used for --similarity_chunks must be greater than 1."
             System.exit(1)
         }
-        if (params.chunks < 2 ) {
-            log.error "The number of chunks must be greater than 1."
-            System.exit(1)
+        if (params.graph_id) {
+            if (!(params.graph_id ==~ /^[\w\.-]+$/)) {
+                log.error "The --graph_id argument must only contain alphanumeric, underscores, periods or dashes."
+                System.exit(1)
+            }
         }
     }
 

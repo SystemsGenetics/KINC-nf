@@ -2,13 +2,14 @@ def VERSION = '3.4.2'
 
 process KINC_SIMILARITY_CHUNK {
     tag "${meta.id}/${index}"
+    label "KINC_GPU"
 
-    container { hardware == "gpu" ? "systemsgenetics/kinc:$VERSION-gpu" : "systemsgenetics/kinc:$VERSION-cpu" }
+    container { max_gpus > 0 ? "systemsgenetics/kinc:$VERSION-gpu" : "systemsgenetics/kinc:$VERSION-cpu" }
 
     input:
     tuple val(meta), path(emx)
     val(num_chunks)
-    val(hardware)
+    val(max_gpus)
     each index
 
     output:
@@ -20,7 +21,7 @@ process KINC_SIMILARITY_CHUNK {
     def prefix = task.ext.prefix ?: "kinc_out"
 
     """
-    kinc settings set cuda ${hardware == "cpu" ? "none" : "0"}
+    kinc settings set cuda ${max_gpus == 0 ? "none" : "0"}
     kinc settings set opencl none
     kinc settings set threads 1
     kinc settings set logging off

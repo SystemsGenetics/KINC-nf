@@ -2,6 +2,7 @@ def VERSION = '3.4.2'
 
 process KINC_CONDTEST {
     tag "${meta.id}"
+    label "KINC_MPI"
 
     container "systemsgenetics/kinc:$VERSION-cpu"
 
@@ -10,7 +11,6 @@ process KINC_CONDTEST {
     tuple val(meta), path(ccm)
     tuple val(meta), path(cmx)
     path(smeta)
-    val(num_chunks)
 
     output:
     tuple val(meta), path("*.csm"), emit: csm
@@ -26,7 +26,7 @@ process KINC_CONDTEST {
     kinc settings set threads 1
     kinc settings set logging off
 
-    mpirun --allow-run-as-root -np  ${num_chunks} \
+    mpirun --allow-run-as-root -np ${task.cpus} \
       kinc run cond-test \
         --emx ${emx} \
         --ccm ${ccm} \

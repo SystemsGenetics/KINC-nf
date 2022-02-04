@@ -10,7 +10,7 @@ body:
         Before you post this issue, please check the documentation:
 
         - [nf-core website: troubleshooting](https://nf-co.re/usage/troubleshooting)
-        - [systemsgenetics/kinc-nf pipeline documentation](https://nf-co.re/kinc/usage)
+        - [systemsgenetics/kinc-nf pipeline documentation](https://github.com/SystemsGenetics/KINC-nf)
 
   - type: textarea
     id: description

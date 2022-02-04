@@ -1,41 +1,47 @@
-# ![systemsgenetics/kinc-nf](docs/images/nf-core-kinc_logo_light.png#gh-light-mode-only) ![systemsgenetics/kinc-nf](docs/images/nf-core-kinc_logo_dark.png#gh-dark-mode-only)
+# ![systemsgenetics/kinc-nf](assets/systemsgenetics-kinc_logo_light.png)
 
 [![GitHub Actions CI Status](https://github.com/systemsgenetics/kinc-nf/workflows/nf-core%20CI/badge.svg)](https://github.com/systemsgenetics/kinc-nf/actions?query=workflow%3A%22nf-core+CI%22)
 [![GitHub Actions Linting Status](https://github.com/systemsgenetics/kinc-nf/workflows/nf-core%20linting/badge.svg)](https://github.com/systemsgenetics/kinc-nf/actions?query=workflow%3A%22nf-core+linting%22)
-[![AWS CI](https://img.shields.io/badge/CI%20tests-full%20size-FF9900?labelColor=000000&logo=Amazon%20AWS)](https://nf-co.re/kinc/results)
-[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![Cite with Zenodo](https://zenodo.org/badge/71836133.svg)](https://zenodo.org/badge/latestdoi/71836133)
 
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A521.10.3-23aa62.svg?labelColor=000000)](https://www.nextflow.io/)
-[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-[![Get help on Slack](http://img.shields.io/badge/slack-nf--core%20%23kinc-4A154B?labelColor=000000&logo=slack)](https://nfcore.slack.com/channels/kinc)
-[![Follow on Twitter](http://img.shields.io/badge/twitter-%40nf__core-1DA1F2?labelColor=000000&logo=twitter)](https://twitter.com/nf_core)
-[![Watch on YouTube](http://img.shields.io/badge/youtube-nf--core-FF0000?labelColor=000000&logo=youtube)](https://www.youtube.com/c/nf-core)
 
 ## Introduction
 
-<!-- TODO nf-core: Write a 1-2 sentence summary of what data the pipeline is for and what it does -->
-**systemsgenetics/kinc-nf** is a bioinformatics best-practice analysis pipeline for Knowledge Independent Network Construction.
+This is the Nextflow pipeline for the knowledge Independent Network Construction (KINC) Toolkit.  Please see the full [KINC documentation](https://kinc.readthedocs.io/en/latest/) to learn more about KINC.
 
-The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It uses Docker/Singularity containers making installation trivial and results highly reproducible. The [Nextflow DSL2](https://www.nextflow.io/docs/latest/dsl2.html) implementation of this pipeline uses one container per process which makes it much easier to maintain and update software dependencies. Where possible, these processes have been submitted to and installed from [nf-core/modules](https://github.com/nf-core/modules) in order to make them available to all nf-core pipelines, and to everyone within the Nextflow community!
+The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It uses Docker/Singularity containers making installation trivial and results highly reproducible. The [Nextflow DSL2](https://www.nextflow.io/docs/latest/dsl2.html) implementation of this pipeline uses one container per process which makes it much easier to maintain and update software dependencies.
 
-<!-- TODO nf-core: Add full-sized test dataset and amend the paragraph below if applicable -->
-On release, automated continuous integration tests run the pipeline on a full-sized dataset on the AWS cloud infrastructure. This ensures that the pipeline runs on AWS, has sensible resource allocation defaults set to run on real-world datasets, and permits the persistent storage of results to benchmark between pipeline releases and other analysis sources. The results obtained from the full-sized test can be viewed on the [nf-core website](https://nf-co.re/kinc/results).
 
 ## Pipeline summary
+This workflow performs both a traditional network analysis and a condition specific network analysis.
+### Traditional Network Construction
+The following steps are performed:
+1. Imports abundance/expression data matrix: `kinc run importemx`
+2. Performs pairwise correlation analysis: `kinc run similarity`
+3. Uses Random Matrix Theory (RMT) to identify a threshold for removing edges: `kinc run rmt`
 
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
-1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+### Condition-Specific Network Construction
+The following steps are performed:
+
+1. Imports abundance/expression data matrix: `kinc run importemx`
+2. Performs pairwise Gaussian Mixture Models (GMMs) followed by correlation analysis: `kinc run similarity`
+3. Performs power analysis of all edges to remove those that are underpowered:  `kinc run corrpower`
+4. Performs condition-specific testing to identify edges associated with traits or experimental conditions: `kinc run cond-test`
+5. Performs bias testing to remove biased edges: `kinc-filter-bias.R`
+6. Ranks the edges, filters the top _n_:  `kinc-filter-rank.R`
+7. Generates summary plots: `kinc-make-plots.R`
+8. Generates network files in GraphML format suitable for Cytoscape or other viewers:  `kinc-net2graphml.py`
 
 ## Quick Start
 
 1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=21.10.3`)
 
-2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility _(please only use [`Conda`](https://conda.io/miniconda.html) as a last resort; see [docs](https://nf-co.re/usage/configuration#basic-configuration-profiles))_
+2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/). Note: This workflow has not yet been tested on the following and may or may not work: [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility.  [`Conda`](https://conda.io/miniconda.html) is not supported.
 
 3. Download the pipeline and test it on a minimal dataset with a single command:
 
@@ -55,34 +61,41 @@ On release, automated continuous integration tests run the pipeline on a full-si
     <!-- TODO nf-core: Update the example "typical command" below used to run the pipeline -->
 
     ```console
-    nextflow run systemsgenetics/kinc-nf -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> --input samplesheet.csv --genome GRCh37
+    nextflow run systemsgenetics/kinc-nf -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> --data <abundance/expression data> \
+	--smeta <annotation/metadata matrix> \
+	--graph_name "<name of your graph>" \
+	--data_missing_val "NA" \
+	--data_num_samples 0 \
+	--data_has_row_ids "False" \
+	--similarity_chunks 10 \
+	--condtest_tests "<conditional tests>" \
+	--condtest_types "<test data types>" \
+	--filterbias_wa_base "<bias filter base>" \
+	--max_cpus <num of CPUs per task> \
+	--max_gpus <num of GPUs per task>
     ```
 
 ## Documentation
 
-The systemsgenetics/kinc-nf pipeline comes with documentation about the pipeline [usage](https://nf-co.re/kinc/usage), [parameters](https://nf-co.re/kinc/parameters) and [output](https://nf-co.re/kinc/output).
+More thorough documenation about the pipeline is coming. Until then, you can learn about the KINC toolkit and pipeline here:
+
+[KINC documentation](https://kinc.readthedocs.io/en/latest/) to learn more about KINC.
 
 ## Credits
+This pipeline was developed by Ben Shealy and Stephen Ficklin.
 
-systemsgenetics/kinc-nf was originally written by Ben Shealey, Stephen Ficklin.
-
-We thank the following people for their extensive assistance in the development of this pipeline:
-
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
 
 ## Contributions and Support
 
 If you would like to contribute to this pipeline, please see the [contributing guidelines](.github/CONTRIBUTING.md).
 
-For further information or help, don't hesitate to get in touch on the [Slack `#kinc` channel](https://nfcore.slack.com/channels/kinc) (you can join with [this invite](https://nf-co.re/join/slack)).
 
 ## Citations
 
-<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->
-<!-- If you use  systemsgenetics/kinc-nf for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->
+If you use this pipeline please cite:
 
-<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->
-An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
+> Joshua J R Burns, Benjamin T Shealy, Mitchell S Greer, John A Hadish, Matthew T McGowan, Tyler Biggs, Melissa C Smith, F Alex Feltus, Stephen P Ficklin, Addressing noise in co-expression network construction, Briefings in Bioinformatics, Volume 23, Issue 1, January 2022, bbab495, https://doi.org/10.1093/bib/bbab495
+
 
 You can cite the `nf-core` publication as follows:
 
