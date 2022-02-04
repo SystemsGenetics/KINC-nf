@@ -1,0 +1,525 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/systemsgenetics/kinc-nf/master/nextflow_schema.json",
+    "title": "systemsgenetics/kinc pipeline parameters",
+    "description": "Knowledge Independent Network Construction",
+    "type": "object",
+    "definitions": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "properties": {
+                "net_type": {
+                    "type": "string",
+                    "default": "cs",
+                    "description": "The type of network to construct. Set to 'cs\" for a context-specific or 'trad' for traditional",
+                    "enum": [
+                        "cs",
+                        "trad"
+                    ]
+                },
+                "data": {
+                    "type": "string",
+                    "default": "None",
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The input data matrix. This file must be in a tab delimited format with the first row containing the header of sample names (and one less column then all other rows).  For all other rows, the first column should be the element (e.g. gene) name and all other values should be the abundance/count values."
+                },
+                "smeta": {
+                    "type": "string",
+                    "default": "None",
+                    "fa_icon": "fab fa-buromobelexperte",
+                    "description": "The sample metadata file.  This is a tab delimited file  where the first row contains the sample names. The sample names must be identical to the names in the data matrix header.  All other columns contain variables specific to the samples."
+                },
+                "outdir": {
+                    "type": "string",
+                    "description": "Path to the output directory where the results will be saved.",
+                    "default": "./results",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary.",
+                    "fa_icon": "fas fa-envelope",
+                    "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                },
+                "graph_name": {
+                    "type": "string",
+                    "default": "KINC csGCN",
+                    "description": "A human readable name for the network created by this workflow.  This name will be used in the final GraphML output file."
+                },
+                "graph_id": {
+                    "type": "string",
+                    "description": "A computer readable name for the network created by this workflow.  This name will be used in the final GraphML output file.  Avoid using spaces or other special characters in this name."
+                }
+            },
+            "required": [
+                "net_type",
+                "data",
+                "smeta",
+                "graph_name"
+            ]
+        },
+        "kinc_run_import_emx_options": {
+            "title": "kinc run import-emx options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "data_num_samples": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "The number of samples in the data matrix. If the file has a header then set this value to 0  and the number of samples will be determined."
+                },
+                "data_missing_val": {
+                    "type": "string",
+                    "default": "NA",
+                    "description": "The string that specifies the missing value in the data matrix (e.g. NA, 0, 0.0)"
+                },
+                "data_has_row_ids": {
+                    "type": "boolean",
+                    "deafult": false,
+                    "description": "Indicates whether the input expression matrix has a \"RowID\" entry that should be ignored"
+                }
+            }
+        },
+        "kinc_run_similarity_options": {
+            "title": "kinc run similarity options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "similarity_chunks": {
+                    "type": "integer",
+                    "fa_icon": "fas fa-border-none",
+                    "description": "The number of chunks into which all calculations should be divided. To maximize performance set this to the at least the same as the queueSize argument.",
+                    "default": 4
+                },
+                "similarity_clusmethod": {
+                    "type": "string",
+                    "default": "gmm",
+                    "description": "Method to use for pairwise clustering: none or GMM",
+                    "enum": [
+                        "none",
+                        "gmm"
+                    ]
+                },
+                "similarity_corrmethod": {
+                    "type": "string",
+                    "default": "spearman",
+                    "description": "Method to use for pairwise correlation: pearson or spearman",
+                    "enum": [
+                        "pearson",
+                        "spearman"
+                    ]
+                },
+                "similarity_minexpr": {
+                    "type": "number",
+                    "description": "Minimum threshold for a sample to be included in a gene pair."
+                },
+                "similarity_minsamp": {
+                    "type": "integer",
+                    "description": "Minimum number of shared samples for a gene pair to be processed.",
+                    "default": 25
+                },
+                "similarity_minclus": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Minimum number of clusters to test."
+                },
+                "similarity_maxclus": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "Maximum number of clusters to test."
+                },
+                "similarity_criterion": {
+                    "type": "string",
+                    "default": "ICL",
+                    "description": "Criterion to select a clustering model.",
+                    "enum": [
+                        "AIC",
+                        "BIC",
+                        "ICL"
+                    ]
+                },
+                "similarity_preout": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to remove pre-clustering outliers."
+                },
+                "similarity_postout": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to remove post-clustering outliers."
+                },
+                "similarity_mincorr": {
+                    "type": "number",
+                    "default": 0.5,
+                    "description": "Minimum threshold (absolute value) for a correlation to be saved."
+                },
+                "similarity_maxcorr": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "Maximum threshold (absolute value) for a correlation to be saved."
+                },
+                "similarity_bsize": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Number of pairs to process in each work block.",
+                    "hidden": true
+                },
+                "similarity_gsize": {
+                    "type": "integer",
+                    "default": 4096,
+                    "description": "The global work size for each OpenCL worker.",
+                    "hidden": true
+                },
+                "similarity_lsize": {
+                    "type": "integer",
+                    "default": 32,
+                    "description": "The local work size for each OpenCL worker.",
+                    "hidden": true
+                }
+            }
+        },
+        "kinc_run_corrpower_options": {
+            "title": "kinc run corrpower options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "corrpower_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the power test."
+                },
+                "corrpower_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8."
+                }
+            }
+        },
+        "kinc_run_cond_test_options": {
+            "title": "kinc run cond-test options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "condtest_delim": {
+                    "type": "string",
+                    "default": "tab",
+                    "description": "Delimiter used to seperate values in the Annotation matrix, usually a tab or comma",
+                    "enum": [
+                        "tab",
+                        "comma"
+                    ]
+                },
+                "condtest_nan": {
+                    "type": "string",
+                    "default": "NA",
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
+                },
+                "condtest_alpha": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "The significance level (i.e. Type I error rate, alpha) for the regression power test. This argument only applies to quantitative variables."
+                },
+                "condtest_power": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "The power value (i.e. 1 minus Type II error rate, 1 minus beta) for the regression power test. For example, if the desired Type II error rate is 0.2, then this value should be 0.8. . This argument only applies to quantitative variables"
+                },
+                "condtest_tests": {
+                    "type": "string",
+                    "description": "The string that specifies the missing value in the annotation matrix (e.g. NA, 0, 0.0)."
+                },
+                "condtest_types": {
+                    "type": "string",
+                    "description": "A comma-separated list of features, with no spaces around commas, from column names of the annotation matrix that should be tested. For example, if the annotation matrix has columns 'Treatment' and 'Subspecies' you can enter: \"Treatment,Subspecies\" Note: column names are case-sensitive."
+                }
+            }
+        },
+        "kinc_run_extract_options": {
+            "title": "kinc run extract options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "extract_format": {
+                    "type": "string",
+                    "default": "tidy",
+                    "description": "Format to use for the output file.",
+                    "enum": [
+                        "text",
+                        "tidy",
+                        "minimal",
+                        "graphml"
+                    ]
+                },
+                "extract_mincorr": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Minimum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_maxcorr": {
+                    "type": "number",
+                    "default": 1,
+                    "description": "Maximum (absolute) correlation threshold for gene pairs."
+                },
+                "extract_pvalue": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to categorical, quantitative and ordinal tests. This filters the network such that only edges (clusters) with p-values below (or above) the given values are kept. To filter all conditions, provide a single p-value threshold. Additionally, you can specify different p-values for different conditions. For example, suppose you were tesing a categorical condition named 'Subspecies' with a label of 'Japonica' and you wanted edges with an p-value < 1e-3, you would input \"Subspecies,Japonica,1e-3\". You can specify to filter edges with a p-value greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Subspecies,Japonica,lt,1e-3\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"lt,1e-3\"."
+                },
+                "extract_rsquare": {
+                    "type": "number",
+                    "default": 0.3,
+                    "description": "This is only used if a Condition-Specific Martrix is provided using the --csm argument and applies to quantitative and ordinal tests. This filters the network such that only edges (clusters) with r-squared values derived from linear regression testing that are above (or below) the given values are kept. To filter all conditions, provide a single r-squared value. By default any r-squared value above the value will be kept. Additionally, you can specify different r-squared values for different conditions. For example, suppose you were tesing a quantiative condition named 'Weight' and you wanted edges with an r-squared value > 0.5, you would input \"Weight,0.5\". You can specify to filter edges greater or less using the \"gt\" or \"lt\" tokens repectively (e.g. \"Weight,gt,0.5\"). You can provide any number of filters but they must be separated using two colons: \"::\". The result of providing multiple tests is a logical \"and\" (i.e. all tests for a condition must pass for the edge to be included). If no value is provided for this argument it defaults to \"gt,0.3\"."
+                }
+            }
+        },
+        "kinc_filter_bias_r_options": {
+            "title": "kinc-filter-bias.R options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "filterbias_wa_th": {
+                    "type": "number",
+                    "default": 0.0001,
+                    "description": "The p-value threshold for performing the Welch Anova test. This test checks for differential expression of the GMM cluster vs non-cluster for each gene, thus, two tests are performed: one for each gene in the edge.  Edges with both tests having P-values below this value are kept. The default is 1e-3."
+                },
+                "filterbias_wa_base": {
+                    "type": "string",
+                    "description": "If the dataset consists of multiple categorical conditions (e.g. multiple treatments) then you can improve the identification of biased edges by providing the name of the categorical condition that represents the base or control condition. If this option is used then only the control samples will be used for testing the Welch Anova test. You must specify the column in the annotation matrix (specified with the --amx option), a comma, then the category representing the control. For example if the column header is \"Treatment\" and the category is \"Control\", you would specify a value of \"Treatment,Control\" for this argument. Be sure to provide proper capitalization and no spaces after the comma."
+                },
+                "filterbias_mtt_th": {
+                    "type": "number",
+                    "default": 0.1,
+                    "description": "The p-value threshold for performing the paired T-test for missingness. This test checks for signicant difference in missingness between the two genes of an edge. This is important because one gene with a high level of missginess will bias the relationship if that missigness is condition-specific. Only edges whose genes have the same pattern of missingness should be considered.  Those with p-values greater than the threshold are considered non-different. The default is 0.1."
+                },
+                "filterbias_split_size": {
+                    "type": "integer",
+                    "default": 1000000,
+                    "description": "When processing large networks, the file is divided into chunks to  prevent  overunning of local memory.  Raise or lower the size of the chunk to use or reduce memory usage.",
+                    "hidden": true
+                }
+            }
+        },
+        "kinc_filter_rank_r_options": {
+            "title": "kinc-filter-rank.R options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "filterrank_score_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the Similarity Score ranking."
+                },
+                "filterrank_pval_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the p-value ranking."
+                },
+                "filterrank_rsqr_weight": {
+                    "type": "number",
+                    "description": "The weight to apply to the R-squared ranking."
+                },
+                "filterrank_top_n": {
+                    "type": "integer",
+                    "description": "Extract the top n ranked edges from the network file. This is the top n ranked edges per condition. If --no_conditions is provided then this is the top n ranked edges in the full network. Note: some edges may have the same rank, but only the first top_n will be returned"
+                }
+            }
+        },
+        "institutional_config_options": {
+            "title": "Institutional config options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "description": "Parameters used to describe centralised config profiles. These should not be edited.",
+            "help_text": "The centralised nf-core configuration profiles use a handful of pipeline parameters to describe themselves. This information is then printed to the Nextflow log when you run a pipeline. You should not need to change these values when you run a pipeline.",
+            "properties": {
+                "custom_config_version": {
+                    "type": "string",
+                    "description": "Git commit id for Institutional configs.",
+                    "default": "master",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "custom_config_base": {
+                    "type": "string",
+                    "description": "Base directory for Institutional configs.",
+                    "default": "https://raw.githubusercontent.com/nf-core/configs/master",
+                    "hidden": true,
+                    "help_text": "If you're running offline, Nextflow will not be able to fetch the institutional config files from the internet. If you don't need them, then this is not a problem. If you do need them, you should download the files from the repo and tell Nextflow where to find them with this parameter.",
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_name": {
+                    "type": "string",
+                    "description": "Institutional config name.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_description": {
+                    "type": "string",
+                    "description": "Institutional config description.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_contact": {
+                    "type": "string",
+                    "description": "Institutional config contact information.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_url": {
+                    "type": "string",
+                    "description": "Institutional config URL link.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                }
+            }
+        },
+        "execution_options": {
+            "title": "Execution options",
+            "type": "object",
+            "fa_icon": "fab fa-acquisitions-incorporated",
+            "description": "Set the top limit for requested resources for any single job.",
+            "help_text": "If you are running on a smaller system, a pipeline step requesting more resources than are available may cause the Nextflow to stop the run with an error. These options allow you to cap the maximum resources requested by any single job so that the pipeline will run on your system.\n\nNote that you can not _increase_ the resources requested by any job using these options. For that you will need your own configuration file. See [the nf-core website](https://nf-co.re/usage/configuration) for details.",
+            "properties": {
+                "max_cpus": {
+                    "type": "integer",
+                    "description": "Maximum number of CPUs that can be requested for any single job.",
+                    "default": 16,
+                    "fa_icon": "fas fa-microchip",
+                    "hidden": true,
+                    "help_text": "Use to set an upper-limit for the CPU requirement for each process. Should be an integer e.g. `--max_cpus 1`"
+                },
+                "max_gpus": {
+                    "type": "integer",
+                    "description": "Maximum number of GPUs that can be requested for any single job.",
+                    "default": 0,
+                    "fa_icon": "fas fa-microchip",
+                    "hidden": true,
+                    "help_text": "Use to set an upper-limit for the GPU requirement for each process. Should be an integer e.g. `--max_gpus 1`"
+                },
+                "max_memory": {
+                    "type": "string",
+                    "description": "Maximum amount of memory that can be requested for any single job.",
+                    "default": "128.GB",
+                    "fa_icon": "fas fa-memory",
+                    "pattern": "^\\d+(\\.\\d+)?\\.?\\s*(K|M|G|T)?B$",
+                    "hidden": true,
+                    "help_text": "Use to set an upper-limit for the memory requirement for each process. Should be a string in the format integer-unit e.g. `--max_memory '8.GB'`"
+                },
+                "max_time": {
+                    "type": "string",
+                    "description": "Maximum amount of time that can be requested for any single job.",
+                    "default": "240.h",
+                    "fa_icon": "far fa-clock",
+                    "pattern": "^(\\d+\\.?\\s*(s|m|h|day)\\s*)+$",
+                    "hidden": true,
+                    "help_text": "Use to set an upper-limit for the time requirement for each process. Should be a string in the format integer-unit e.g. `--max_time '2.h'`"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "properties": {
+                "help": {
+                    "type": "boolean",
+                    "description": "Display help text.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "email_on_fail": {
+                    "type": "string",
+                    "description": "Email address for completion summary, only when pipeline fails.",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "help_text": "An email address to send a summary email to when the pipeline is completed - ONLY sent if the pipeline does not exit successfully.",
+                    "hidden": true
+                },
+                "plaintext_email": {
+                    "type": "boolean",
+                    "description": "Send plain-text email instead of HTML.",
+                    "fa_icon": "fas fa-remove-format",
+                    "hidden": true
+                },
+                "monochrome_logs": {
+                    "type": "boolean",
+                    "description": "Do not use coloured log outputs.",
+                    "fa_icon": "fas fa-palette",
+                    "hidden": true
+                },
+                "tracedir": {
+                    "type": "string",
+                    "description": "Directory to keep pipeline Nextflow logs and reports.",
+                    "default": "${params.outdir}/pipeline_info",
+                    "fa_icon": "fas fa-cogs",
+                    "hidden": true
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "description": "Boolean whether to validate parameters against the schema at runtime",
+                    "default": true,
+                    "fa_icon": "fas fa-check-square",
+                    "hidden": true
+                },
+                "show_hidden_params": {
+                    "type": "boolean",
+                    "fa_icon": "far fa-eye-slash",
+                    "description": "Show all params when using `--help`",
+                    "hidden": true,
+                    "help_text": "By default, parameters set as _hidden_ in the schema are not shown on the command line when a user runs with `--help`. Specifying this option will tell the pipeline to show all parameters."
+                },
+                "enable_conda": {
+                    "type": "boolean",
+                    "description": "Run this workflow with Conda. You can also use '-profile conda' instead of providing this parameter.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-bacon"
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_output_options"
+        },
+        {
+            "$ref": "#/definitions/execution_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_import_emx_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_similarity_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_corrpower_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_cond_test_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_run_extract_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_filter_bias_r_options"
+        },
+        {
+            "$ref": "#/definitions/kinc_filter_rank_r_options"
+        },
+        {
+            "$ref": "#/definitions/institutional_config_options"
+        },
+        {
+            "$ref": "#/definitions/generic_options"
+        }
+    ]
+}

@@ -1,0 +1,40 @@
+name: kinc_makeplots
+description: Generates summary plots of the resulting csGCN.
+
+keywords:
+  - coexpression
+  - networks
+  - correlation
+tools:
+  - interproscan:
+    description: The Knowledge Independent Network Construction (KINC) software is an application for constructing Gene Co-expression Networks (GCN) from gene expression data.
+    homepage: https://kinc.readthedocs.io/en/latest/
+    documentation: https://kinc.readthedocs.io/en/latest/
+    tool_dev_url: https://github.com/SystemsGenetics/KINC
+    doi: "doi.org/10.1093/bib/bbab495"
+    licence: ['MIT']
+
+input:
+  - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+  - net:
+        type: file
+        description: A tab-delimeted network file.
+        pattern: "*.{tsv}"
+
+
+output:
+  - images:
+        type: files
+        description: A directory containing a set of summary plots in PNG format.
+        pattern: "*.{png}"
+  - version:
+        type: file
+        description: File containing software versions
+        pattern: "version.txt"
+
+authors:
+  - "@spficklin", "@bentsherman"

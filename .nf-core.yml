@@ -1,0 +1,17 @@
+lint:
+    files_exist:
+        - assets/nf-core-systemsgenetics/kinc-nf_logo_light.png
+        - docs/images/nf-core-systemsgenetics/kinc-nf_logo_light.png
+        - docs/images/nf-core-systemsgenetics/kinc-nf_logo_dark.png
+    nextflow_config: false
+    files_unchanged:
+        - .github/CONTRIBUTING.md
+        - .github/ISSUE_TEMPLATE/bug_report.yml
+        - .github/ISSUE_TEMPLATE/config.yml
+        - .github/ISSUE_TEMPLATE/feature_request.yml
+        - .github/PULL_REQUEST_TEMPLATE.md
+        - .github/workflows/branch.yml
+        - assets/email_template.html
+        - assets/email_template.txt
+        - assets/sendmail_template.txt
+        - docs/README.md

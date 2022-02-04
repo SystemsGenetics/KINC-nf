@@ -1,0 +1,40 @@
+name: kinc_similarity_chunk
+description: Performs pairwise correlation of the data matrix by chunking the input data matrix.
+
+keywords:
+  - coexpression
+  - networks
+  - correlation
+tools:
+  - interproscan:
+    description: The Knowledge Independent Network Construction (KINC) software is an application for constructing Gene Co-expression Networks (GCN) from gene expression data.
+    homepage: https://kinc.readthedocs.io/en/latest/
+    documentation: https://kinc.readthedocs.io/en/latest/
+    tool_dev_url: https://github.com/SystemsGenetics/KINC
+    doi: "doi.org/10.1093/bib/bbab495"
+    licence: ['MIT']
+
+input:
+  - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+  - input:
+        type: file
+        description: Gene Expression Matrix in binary format.
+        pattern: "*.{emx}"
+
+
+output:
+  - abd:
+        type: file
+        description: Chunk files
+        pattern: "*.{abd}"
+  - version:
+        type: file
+        description: File containing software versions
+        pattern: "version.txt"
+
+authors:
+  - "@spficklin", "@bentsherman"

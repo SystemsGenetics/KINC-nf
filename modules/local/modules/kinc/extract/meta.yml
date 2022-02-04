@@ -1,0 +1,51 @@
+name: kinc_extract
+description: Extracts to a text file a network from KINC binary files.
+
+keywords:
+  - coexpression
+  - networks
+  - correlation
+tools:
+  - interproscan:
+    description: The Knowledge Independent Network Construction (KINC) software is an application for constructing Gene Co-expression Networks (GCN) from gene expression data.
+    homepage: https://kinc.readthedocs.io/en/latest/
+    documentation: https://kinc.readthedocs.io/en/latest/
+    tool_dev_url: https://github.com/SystemsGenetics/KINC
+    doi: "doi.org/10.1093/bib/bbab495"
+    licence: ['MIT']
+
+input:
+  - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+  - emx:
+        type: files
+        description: Gene Expression Matrix in binary format.
+        pattern: "*.{emx}"
+  - ccm:
+        type: files
+        description: Cluster composition matrix.
+        pattern: "*.{ccm}"
+  - cmx:
+        type: files
+        description: Correlation matrix.
+        pattern: "*.{cmx}"
+  - csm:
+        type: file
+        description: The condition specific matrix file.
+        pattern: "*.{csm}"
+
+output:
+  - net:
+        type: file
+        description: A tab-delimeted network file.
+        pattern: "*.{tsv}"
+  - version:
+        type: file
+        description: File containing software versions
+        pattern: "version.txt"
+
+authors:
+  - "@spficklin", "@bentsherman"
