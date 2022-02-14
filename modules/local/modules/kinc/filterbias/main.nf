@@ -23,7 +23,6 @@ process KINC_FILTERBIAS {
     kinc-filter-bias.R  \
           --net ${net} \
           --emx ${data} \
-          --amx ${amx} \
           --out_prefix "${prefix}" \
           --suffix ".filtered.net.tsv" \
           --threads ${task.cpus} \
