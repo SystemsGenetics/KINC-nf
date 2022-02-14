@@ -10,6 +10,7 @@ process KINC_FILTERBIAS {
     input:
     tuple val(meta), path(data)
     tuple val(meta), path(net)
+    val(wa_base)
     path(amx)
 
     output:
@@ -19,6 +20,10 @@ process KINC_FILTERBIAS {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "kinc_out"
+    def amx_arg = ''
+    if (wa_base) {
+        amx_arg = "--amx ${amx}"
+    }
     """
     kinc-filter-bias.R  \
           --net ${net} \
@@ -26,7 +31,7 @@ process KINC_FILTERBIAS {
           --out_prefix "${prefix}" \
           --suffix ".filtered.net.tsv" \
           --threads ${task.cpus} \
-          ${args}
+          ${amx_arg} ${args}
 
     echo $VERSION >KINC.version.txt
     """
