@@ -20,7 +20,7 @@ process KINC_NET2GRAPHML {
     outfile
     """
     kinc-net2graphml.py  \
-          --net "${net}" \
+          --net ${net} \
           --outfile "${outfile}.graphml" \
           ${args}
 
