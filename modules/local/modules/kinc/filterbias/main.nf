@@ -10,8 +10,7 @@ process KINC_FILTERBIAS {
     input:
     tuple val(meta), path(data)
     tuple val(meta), path(net)
-    val(wa_base)
-    path(amx)
+    tuple val(wa_base), path(amx)
 
     output:
     tuple val(meta), path("*.filtered.net.tsv"), emit: net

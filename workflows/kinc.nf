@@ -91,7 +91,8 @@ workflow KINC {
     KINC_EXTRACT(emx_file, pccm_file, pcmx_file, pcsm_file)
 
     // Step 6: Remove biased edges from the network file
-    KINC_FILTERBIAS(data_file, KINC_EXTRACT.out.net, params.filterbias_wa_base, smeta_file)
+    wa_options = smeta_file.map { [params.filterbias_wa_base, it]}
+    KINC_FILTERBIAS(data_file, KINC_EXTRACT.out.net, wa_options)
 
     // Step 7: Generate the summary plots
     KINC_MAKEPLOTS(KINC_FILTERBIAS.out.net)
